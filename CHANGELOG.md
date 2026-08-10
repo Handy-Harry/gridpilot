@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.5 - 2026-08-10
+
+- Classify GridPilot as a service so it appears under integrations, not helpers.
+
 ## 0.1.4 - 2026-08-10
 
 - Set the maximum grid-import adjustment step to 100 W.
