@@ -158,7 +158,7 @@ class GridPilotCard extends HTMLElement {
       </style>
       <ha-card tabindex="0">
         <div class="heading">
-          <img class="brand-icon" src="/gridpilot_brand/icon.svg?v=0.1.6" alt="">
+          <img class="brand-icon" src="/gridpilot_brand/icon.svg?v=0.1.7" alt="">
           <div class="title"></div>
         </div>
         <div class="battery">

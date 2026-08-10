@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.7 - 2026-08-10
+
+- Replace the smart-meter artwork with the compact 256 px version.
+
 ## 0.1.6 - 2026-08-10
 
 - Add the smart-meter brand artwork to the integration, dashboard card and README.
