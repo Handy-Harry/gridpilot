@@ -5,7 +5,7 @@ import zlib
 from pathlib import Path
 
 ROOT = Path(__file__).parents[1]
-BRAND = ROOT / "brand"
+BRAND = ROOT / "custom_components" / "gridpilot" / "brand"
 
 
 def _inside_polygon(x: int, y: int, points: list[tuple[int, int]]) -> bool:
