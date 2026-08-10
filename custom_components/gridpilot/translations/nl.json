@@ -29,7 +29,6 @@
         "description": "Selecteer één totale verbruikssensor of alle drie de fasesensoren.",
         "data": {
           "grid_setpoint": "Netsetpoint-uitgang",
-          "max_grid_power": "Maximaal netvermogen",
           "home_load": "Totaal huisverbruik (optioneel)",
           "home_load_l1": "Huisverbruik fase L1 (optioneel)",
           "home_load_l2": "Huisverbruik fase L2 (optioneel)",
@@ -37,11 +36,28 @@
         },
         "data_description": {
           "grid_setpoint": "Schrijfbare number-entiteit voor de gewenste netafname in watt. GridPilot 0.1 controleert alleen deze koppeling en schrijft er nooit naar. Victron-voorbeeld: number.gx_device_ac_power_setpoint.",
-          "max_grid_power": "Sensor of number met de positieve maximaal toegestane netafname in W of kW. Kies geen entiteit met waarde -1 voor onbeperkt. Voorbeeld: sensor.maximale_netafname.",
           "home_load": "Sensor met het actuele totale huisverbruik in W of kW. Wanneer deze is geselecteerd, krijgt hij voorrang op de fasesensoren.",
           "home_load_l1": "Actueel huisverbruik op fase L1 in W of kW. Vul L1, L2 en L3 in wanneer geen sensor voor totaal huisverbruik is geselecteerd.",
           "home_load_l2": "Actueel huisverbruik op fase L2 in W of kW. Vul L1, L2 en L3 in wanneer geen sensor voor totaal huisverbruik is geselecteerd.",
           "home_load_l3": "Actueel huisverbruik op fase L3 in W of kW. Vul L1, L2 en L3 in wanneer geen sensor voor totaal huisverbruik is geselecteerd."
+        }
+      },
+      "control": {
+        "title": "Regelparameters configureren",
+        "description": "Deze waarden worden intern opgeslagen in de Home Assistant-config-entry van GridPilot. Er worden geen helpers aangemaakt.",
+        "data": {
+          "max_grid_power": "Maximale netafname",
+          "minimum_soc": "SOC voor maximaal bijladen",
+          "charge_soc": "SOC voor volledige compensatie van het huisverbruik",
+          "normal_soc": "SOC voor normale batterijwerking",
+          "minimum_charge_power": "Minimaal laadvermogen"
+        },
+        "data_description": {
+          "max_grid_power": "Positieve maximaal toegestane netafname in watt. Deze vaste waarde vervangt een afzonderlijke helper. Standaard: 2900 W.",
+          "minimum_soc": "Op of onder deze SOC vraagt GridPilot de maximaal toegestane netafname. Standaard: 10%.",
+          "charge_soc": "Op deze SOC is het berekende setpoint gelijk aan het actuele huisverbruik. Eronder wordt extra batterijlaadvermogen toegevoegd. Standaard: 15%.",
+          "normal_soc": "Op of boven deze SOC is het berekende setpoint 0 W. Tussen de laadgrens en normale grens bouwt de netcompensatie af naar nul. Standaard: 20%.",
+          "minimum_charge_power": "Minimaal extra laadvermogen onder de laadgrens, voordat de limiet voor maximale netafname wordt toegepast. Standaard: 300 W."
         }
       }
     },
@@ -56,12 +72,14 @@
         "title": "Batterijcurve configureren",
         "description": "GridPilot berekent een netsetpoint met deze oplopende SOC-grenzen. De limiet voor maximale netafname begrenst altijd het resultaat.",
         "data": {
+          "max_grid_power": "Maximale netafname",
           "minimum_soc": "SOC voor maximaal bijladen",
           "charge_soc": "SOC voor volledige compensatie van het huisverbruik",
           "normal_soc": "SOC voor normale batterijwerking",
           "minimum_charge_power": "Minimaal laadvermogen"
         },
         "data_description": {
+          "max_grid_power": "Positieve maximaal toegestane netafname in watt, intern opgeslagen in GridPilot. Standaard: 2900 W.",
           "minimum_soc": "Op of onder deze SOC vraagt GridPilot de maximaal toegestane netafname. Standaard: 10%.",
           "charge_soc": "Op deze SOC is het berekende setpoint gelijk aan het actuele huisverbruik. Eronder wordt extra batterijlaadvermogen toegevoegd. Standaard: 15%.",
           "normal_soc": "Op of boven deze SOC is het berekende setpoint 0 W. Tussen de laadgrens en normale grens bouwt de netcompensatie af naar nul. Standaard: 20%.",

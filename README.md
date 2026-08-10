@@ -6,7 +6,7 @@ compact battery flow dashboard card.
 
 ## Current status
 
-Version `0.1.1` is a public preview. It operates permanently in shadow mode:
+Version `0.1.2` is a public preview. It operates permanently in shadow mode:
 GridPilot reads configured entities and publishes its calculated battery grid
 setpoint, but it never writes to an inverter or charger.
 
@@ -14,7 +14,7 @@ setpoint, but it never writes to an inverter or charger.
 
 - UI-only configuration through a Home Assistant config flow.
 - Generic entity mapping with a Victron-oriented preset.
-- Configurable minimum, charge and normal SOC thresholds.
+- Integration-owned grid-power and battery-curve options without helpers.
 - Calculated grid setpoint and operating-mode sensors.
 - Measurement-validity binary sensor.
 - Bundled `custom:gridpilot-card` frontend card.

@@ -26,6 +26,7 @@ from .const import (
     CONF_MINIMUM_SOC,
     CONF_NORMAL_SOC,
     DEFAULT_CHARGE_SOC,
+    DEFAULT_MAX_GRID_POWER,
     DEFAULT_MINIMUM_CHARGE_POWER,
     DEFAULT_MINIMUM_SOC,
     DEFAULT_NORMAL_SOC,
@@ -60,6 +61,10 @@ class GridPilotController:
             if key
             in {
                 CONF_BATTERY_SOC,
+                CONF_HOME_LOAD,
+                CONF_HOME_LOAD_L1,
+                CONF_HOME_LOAD_L2,
+                CONF_HOME_LOAD_L3,
                 CONF_MAX_GRID_POWER,
             }
             and value
@@ -94,8 +99,8 @@ class GridPilotController:
             try:
                 soc = self._numeric_state(self.entry.data[CONF_BATTERY_SOC])
                 home_load = self._home_load()
-                max_grid_power = self._power_state(self.entry.data[CONF_MAX_GRID_POWER])
                 options = self.entry.options
+                max_grid_power = self._max_grid_power()
                 curve = BatteryCurve(
                     minimum_soc=float(
                         options.get(CONF_MINIMUM_SOC, DEFAULT_MINIMUM_SOC)
@@ -154,6 +159,14 @@ class GridPilotController:
         if not all(phase_entities):
             raise ValueError("Configure a total home load or all three phase entities")
         return sum(self._power_state(entity_id) for entity_id in phase_entities)
+
+    def _max_grid_power(self) -> float:
+        """Return the internal limit or a legacy entity value during migration."""
+        if CONF_MAX_GRID_POWER in self.entry.options:
+            return float(self.entry.options[CONF_MAX_GRID_POWER])
+        if entity_id := self.entry.data.get(CONF_MAX_GRID_POWER):
+            return self._power_state(entity_id)
+        return DEFAULT_MAX_GRID_POWER
 
     @callback
     def async_add_listener(self, listener: Callable[[], None]) -> Callable[[], None]:

@@ -5,7 +5,7 @@ from typing import Final
 
 DOMAIN: Final = "gridpilot"
 NAME: Final = "GridPilot"
-VERSION: Final = "0.1.1"
+VERSION: Final = "0.1.2"
 
 PLATFORMS: Final = ["sensor", "binary_sensor"]
 UPDATE_INTERVAL: Final = timedelta(minutes=1)
@@ -29,6 +29,7 @@ DEFAULT_MINIMUM_SOC: Final = 10.0
 DEFAULT_CHARGE_SOC: Final = 15.0
 DEFAULT_NORMAL_SOC: Final = 20.0
 DEFAULT_MINIMUM_CHARGE_POWER: Final = 300.0
+DEFAULT_MAX_GRID_POWER: Final = 2_900.0
 
 PROFILE_GENERIC: Final = "generic"
 PROFILE_VICTRON: Final = "victron"

@@ -25,6 +25,7 @@ from .const import (
     CONF_NORMAL_SOC,
     CONF_PROFILE,
     DEFAULT_CHARGE_SOC,
+    DEFAULT_MAX_GRID_POWER,
     DEFAULT_MINIMUM_CHARGE_POWER,
     DEFAULT_MINIMUM_SOC,
     DEFAULT_NORMAL_SOC,
@@ -45,7 +46,7 @@ def _entity_selector(domains: list[str]) -> selector.EntitySelector:
 class GridPilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle the GridPilot setup flow."""
 
-    VERSION = 1
+    VERSION = 2
     MINOR_VERSION = 1
 
     def __init__(self) -> None:
@@ -117,9 +118,8 @@ class GridPilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "load_entities_required"
             else:
                 self._data.update(user_input)
-                return self.async_create_entry(title="GridPilot", data=self._data)
+                return await self.async_step_control()
 
-        power_sources = ["sensor", "number"]
         victron = self._data.get(CONF_PROFILE) == PROFILE_VICTRON
         setpoint_key = vol.Required(
             CONF_GRID_SETPOINT,
@@ -146,7 +146,6 @@ class GridPilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         schema = vol.Schema(
             {
                 setpoint_key: _entity_selector(["number"]),
-                vol.Required(CONF_MAX_GRID_POWER): _entity_selector(power_sources),
                 vol.Optional(CONF_HOME_LOAD): _entity_selector(["sensor"]),
                 l1_key: _entity_selector(["sensor"]),
                 l2_key: _entity_selector(["sensor"]),
@@ -154,6 +153,22 @@ class GridPilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             }
         )
         return self.async_show_form(step_id="energy", data_schema=schema, errors=errors)
+
+    async def async_step_control(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Collect the initial control parameters."""
+        errors = _validate_control_options(user_input)
+        if user_input is not None and not errors:
+            return self.async_create_entry(
+                title="GridPilot", data=self._data, options=user_input
+            )
+
+        return self.async_show_form(
+            step_id="control",
+            data_schema=_control_options_schema({}),
+            errors=errors,
+        )
 
     @staticmethod
     @callback
@@ -171,57 +186,83 @@ class GridPilotOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Edit SOC and charge-power options."""
-        errors: dict[str, str] = {}
-        if user_input is not None:
-            if not (
-                user_input[CONF_MINIMUM_SOC]
-                < user_input[CONF_CHARGE_SOC]
-                < user_input[CONF_NORMAL_SOC]
-            ):
-                errors["base"] = "invalid_soc_order"
-            else:
-                return self.async_create_entry(title="", data=user_input)
+        errors = _validate_control_options(user_input)
+        if user_input is not None and not errors:
+            return self.async_create_entry(title="", data=user_input)
 
-        current = self.config_entry.options
-        schema = vol.Schema(
-            {
-                vol.Required(
-                    CONF_MINIMUM_SOC,
-                    default=current.get(CONF_MINIMUM_SOC, DEFAULT_MINIMUM_SOC),
-                ): selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        min=0, max=98, step=0.5, unit_of_measurement="%"
-                    )
-                ),
-                vol.Required(
-                    CONF_CHARGE_SOC,
-                    default=current.get(CONF_CHARGE_SOC, DEFAULT_CHARGE_SOC),
-                ): selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        min=1, max=99, step=0.5, unit_of_measurement="%"
-                    )
-                ),
-                vol.Required(
-                    CONF_NORMAL_SOC,
-                    default=current.get(CONF_NORMAL_SOC, DEFAULT_NORMAL_SOC),
-                ): selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        min=2, max=100, step=0.5, unit_of_measurement="%"
-                    )
-                ),
-                vol.Required(
-                    CONF_MINIMUM_CHARGE_POWER,
-                    default=current.get(
-                        CONF_MINIMUM_CHARGE_POWER, DEFAULT_MINIMUM_CHARGE_POWER
-                    ),
-                ): selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        min=0,
-                        max=10_000,
-                        step=10,
-                        unit_of_measurement="W",
-                    )
-                ),
-            }
+        return self.async_show_form(
+            step_id="init",
+            data_schema=_control_options_schema(self.config_entry.options),
+            errors=errors,
         )
-        return self.async_show_form(step_id="init", data_schema=schema, errors=errors)
+
+
+def _validate_control_options(
+    user_input: dict[str, Any] | None,
+) -> dict[str, str]:
+    """Validate the control parameters shared by setup and options flows."""
+    if user_input is None:
+        return {}
+    if not (
+        user_input[CONF_MINIMUM_SOC]
+        < user_input[CONF_CHARGE_SOC]
+        < user_input[CONF_NORMAL_SOC]
+    ):
+        return {"base": "invalid_soc_order"}
+    return {}
+
+
+def _control_options_schema(current: dict[str, Any]) -> vol.Schema:
+    """Build the shared schema for persistent control parameters."""
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_MAX_GRID_POWER,
+                default=current.get(CONF_MAX_GRID_POWER, DEFAULT_MAX_GRID_POWER),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=0,
+                    max=100_000,
+                    step=10,
+                    unit_of_measurement="W",
+                )
+            ),
+            vol.Required(
+                CONF_MINIMUM_SOC,
+                default=current.get(CONF_MINIMUM_SOC, DEFAULT_MINIMUM_SOC),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=0, max=98, step=0.5, unit_of_measurement="%"
+                )
+            ),
+            vol.Required(
+                CONF_CHARGE_SOC,
+                default=current.get(CONF_CHARGE_SOC, DEFAULT_CHARGE_SOC),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=1, max=99, step=0.5, unit_of_measurement="%"
+                )
+            ),
+            vol.Required(
+                CONF_NORMAL_SOC,
+                default=current.get(CONF_NORMAL_SOC, DEFAULT_NORMAL_SOC),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=2, max=100, step=0.5, unit_of_measurement="%"
+                )
+            ),
+            vol.Required(
+                CONF_MINIMUM_CHARGE_POWER,
+                default=current.get(
+                    CONF_MINIMUM_CHARGE_POWER, DEFAULT_MINIMUM_CHARGE_POWER
+                ),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=0,
+                    max=10_000,
+                    step=10,
+                    unit_of_measurement="W",
+                )
+            ),
+        }
+    )

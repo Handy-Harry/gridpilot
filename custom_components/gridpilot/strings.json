@@ -29,7 +29,6 @@
         "description": "Select either one total home-load sensor or all three phase sensors.",
         "data": {
           "grid_setpoint": "Grid setpoint output",
-          "max_grid_power": "Maximum grid power",
           "home_load": "Total home load (optional)",
           "home_load_l1": "Home load phase L1 (optional)",
           "home_load_l2": "Home load phase L2 (optional)",
@@ -37,11 +36,28 @@
         },
         "data_description": {
           "grid_setpoint": "Writable number entity for the requested grid import in watts. GridPilot 0.1 only validates this mapping and never writes to it. Victron example: number.gx_device_ac_power_setpoint.",
-          "max_grid_power": "Sensor or number containing the positive maximum permitted grid import in W or kW. Do not select an entity whose value is -1 for unlimited. Example: sensor.maximale_netafname.",
           "home_load": "Sensor containing the instantaneous total home consumption in W or kW. When selected, it takes precedence over the phase sensors.",
           "home_load_l1": "Instantaneous home consumption on phase L1 in W or kW. Complete L1, L2 and L3 when no total home-load sensor is selected.",
           "home_load_l2": "Instantaneous home consumption on phase L2 in W or kW. Complete L1, L2 and L3 when no total home-load sensor is selected.",
           "home_load_l3": "Instantaneous home consumption on phase L3 in W or kW. Complete L1, L2 and L3 when no total home-load sensor is selected."
+        }
+      },
+      "control": {
+        "title": "Configure control parameters",
+        "description": "These values are stored inside GridPilot's Home Assistant config entry. No helpers are created.",
+        "data": {
+          "max_grid_power": "Maximum grid import",
+          "minimum_soc": "SOC for maximum charging",
+          "charge_soc": "SOC for full home-load compensation",
+          "normal_soc": "SOC for normal battery operation",
+          "minimum_charge_power": "Minimum charging power"
+        },
+        "data_description": {
+          "max_grid_power": "Positive maximum permitted grid import in watts. This fixed value replaces the need for a separate helper. Default: 2900 W.",
+          "minimum_soc": "At or below this SOC, GridPilot requests the maximum permitted grid import. Default: 10%.",
+          "charge_soc": "At this SOC, the calculated setpoint equals the current home load. Below it, extra battery charging power is added. Default: 15%.",
+          "normal_soc": "At or above this SOC, the calculated setpoint is 0 W. Between the charge and normal thresholds, grid compensation tapers to zero. Default: 20%.",
+          "minimum_charge_power": "Minimum extra charging power requested below the charge threshold, before applying the maximum grid-power limit. Default: 300 W."
         }
       }
     },
@@ -58,12 +74,14 @@
         "title": "Configure the battery curve",
         "description": "GridPilot calculates a grid setpoint from these ordered SOC thresholds. The maximum grid-power limit always caps the result.",
         "data": {
+          "max_grid_power": "Maximum grid import",
           "minimum_soc": "SOC for maximum charging",
           "charge_soc": "SOC for full home-load compensation",
           "normal_soc": "SOC for normal battery operation",
           "minimum_charge_power": "Minimum charging power"
         },
         "data_description": {
+          "max_grid_power": "Positive maximum permitted grid import in watts, stored inside GridPilot. Default: 2900 W.",
           "minimum_soc": "At or below this SOC, GridPilot requests the maximum permitted grid import. Default: 10%.",
           "charge_soc": "At this SOC, the calculated setpoint equals the current home load. Below it, extra battery charging power is added. Default: 15%.",
           "normal_soc": "At or above this SOC, the calculated setpoint is 0 W. Between the charge and normal thresholds, grid compensation tapers to zero. Default: 20%.",

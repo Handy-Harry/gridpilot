@@ -5,8 +5,20 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from .calculations import normalize_power
+from .const import (
+    CONF_CHARGE_SOC,
+    CONF_MAX_GRID_POWER,
+    CONF_MINIMUM_CHARGE_POWER,
+    CONF_MINIMUM_SOC,
+    CONF_NORMAL_SOC,
+    DEFAULT_CHARGE_SOC,
+    DEFAULT_MINIMUM_CHARGE_POWER,
+    DEFAULT_MINIMUM_SOC,
+    DEFAULT_NORMAL_SOC,
+    VERSION,
+)
 from .const import DOMAIN as DOMAIN
-from .const import VERSION
 
 FRONTEND_PATH = Path(__file__).parent / "frontend"
 FRONTEND_URL = f"/gridpilot_static/gridpilot-card.js?v={VERSION}"
@@ -45,6 +57,65 @@ async def async_setup_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) ->
     await controller.async_start()
     await hass.config_entries.async_forward_entry_setups(entry, platforms)
     return True
+
+
+async def async_migrate_entry(
+    hass: HomeAssistant, entry: GridPilotConfigEntry
+) -> bool:
+    """Move version 1 control parameters into config-entry options."""
+    if entry.version > 2:
+        return False
+
+    if entry.version == 1:
+        data = dict(entry.data)
+        options = dict(entry.options)
+        legacy_max_grid_power = data.get(CONF_MAX_GRID_POWER)
+
+        if CONF_MAX_GRID_POWER not in options:
+            migrated_max_grid_power = _legacy_max_grid_power(
+                hass, legacy_max_grid_power
+            )
+            if migrated_max_grid_power is not None:
+                options[CONF_MAX_GRID_POWER] = migrated_max_grid_power
+                data.pop(CONF_MAX_GRID_POWER, None)
+        else:
+            data.pop(CONF_MAX_GRID_POWER, None)
+
+        defaults = {
+            CONF_MINIMUM_SOC: DEFAULT_MINIMUM_SOC,
+            CONF_CHARGE_SOC: DEFAULT_CHARGE_SOC,
+            CONF_NORMAL_SOC: DEFAULT_NORMAL_SOC,
+            CONF_MINIMUM_CHARGE_POWER: DEFAULT_MINIMUM_CHARGE_POWER,
+        }
+        for key, value in defaults.items():
+            options.setdefault(key, value)
+
+        hass.config_entries.async_update_entry(
+            entry,
+            data=data,
+            options=options,
+            version=2,
+            minor_version=1,
+        )
+
+    return True
+
+
+def _legacy_max_grid_power(hass: HomeAssistant, value: Any) -> float | None:
+    """Convert a legacy entity mapping or numeric value to persistent watts."""
+    if isinstance(value, int | float):
+        return max(0.0, float(value))
+    if isinstance(value, str) and (state := hass.states.get(value)) is not None:
+        try:
+            return max(
+                0.0,
+                normalize_power(
+                    float(state.state), state.attributes.get("unit_of_measurement")
+                ),
+            )
+        except (TypeError, ValueError):
+            pass
+    return None
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) -> bool:
