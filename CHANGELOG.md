@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.6 - 2026-08-10
+
+- Add the smart-meter brand artwork to the integration, dashboard card and README.
+
 ## 0.1.5 - 2026-08-10
 
 - Classify GridPilot as a service so it appears under integrations, not helpers.

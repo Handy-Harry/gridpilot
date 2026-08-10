@@ -21,6 +21,7 @@ from .const import (
 from .const import DOMAIN as DOMAIN
 
 FRONTEND_PATH = Path(__file__).parent / "frontend"
+BRAND_PATH = Path(__file__).parent / "brand"
 FRONTEND_URL = f"/gridpilot_static/gridpilot-card.js?v={VERSION}"
 
 if TYPE_CHECKING:
@@ -37,7 +38,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     from homeassistant.components.http import StaticPathConfig
 
     await hass.http.async_register_static_paths(
-        [StaticPathConfig("/gridpilot_static", str(FRONTEND_PATH), False)]
+        [
+            StaticPathConfig("/gridpilot_static", str(FRONTEND_PATH), False),
+            StaticPathConfig("/gridpilot_brand", str(BRAND_PATH), False),
+        ]
     )
     add_extra_js_url(hass, FRONTEND_URL)
     return True

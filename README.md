@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="custom_components/gridpilot/brand/logo.png" alt="GridPilot smart meter" width="240">
+</p>
+
 # GridPilot
 
 GridPilot is a Home Assistant energy orchestration integration for batteries,
@@ -6,7 +10,7 @@ compact battery flow dashboard card.
 
 ## Current status
 
-Version `0.1.5` is a public preview. It operates permanently in shadow mode:
+Version `0.1.6` is a public preview. It operates permanently in shadow mode:
 GridPilot reads configured entities and publishes its calculated battery grid
 setpoint, but it never writes to an inverter or charger.
 

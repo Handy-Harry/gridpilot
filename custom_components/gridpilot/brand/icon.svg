@@ -1,6 +1,83 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <rect width="256" height="256" rx="56" fill="#102a43"/>
-  <path d="M43 67h170v122H43z" fill="none" stroke="#d7e3ed" stroke-width="16" rx="22"/>
-  <path d="M213 102h17v52h-17" fill="#d7e3ed"/>
-  <path d="M124 83 91 137h31l-10 38 53-67h-34l14-25z" fill="#f59e0b"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 256 256">
+  <defs>
+    <filter id="redGlow" x="-120%" y="-120%" width="340%" height="340%">
+      <feGaussianBlur stdDeviation="3.2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="greenGlow" x="-120%" y="-120%" width="340%" height="340%">
+      <feGaussianBlur stdDeviation="1.8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.55" stop-color="#f5f5f3"/>
+      <stop offset="1" stop-color="#e9e9e6"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" x2="1">
+      <stop offset="0" stop-color="#aab49b"/>
+      <stop offset="1" stop-color="#d2d8bd"/>
+    </linearGradient>
+    <linearGradient id="greenPanel" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#d0ed29"/>
+      <stop offset="1" stop-color="#9fc218"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke="#ff2c17" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" filter="url(#redGlow)">
+    <path d="M22 18 V101 Q22 119 40 119 H72"/>
+    <path d="M34 18 V108 Q34 130 56 130 H72"/>
+    <path d="M46 18 V115 Q46 141 72 141"/>
+  </g>
+  <g fill="none" stroke="#fff7f2" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 18 V101 Q22 119 40 119 H72"/>
+    <path d="M34 18 V108 Q34 130 56 130 H72"/>
+    <path d="M46 18 V115 Q46 141 72 141"/>
+  </g>
+  <g fill="#ffffff">
+    <path d="M17.5 72 L22 77 L26.5 72 L24.2 69.8 L22 72.2 L19.8 69.8 Z"/>
+    <path d="M29.5 80 L34 85 L38.5 80 L36.2 77.8 L34 80.2 L31.8 77.8 Z"/>
+    <path d="M41.5 88 L46 93 L50.5 88 L48.2 85.8 L46 88.2 L43.8 85.8 Z"/>
+  </g>
+  <rect x="72" y="28" width="116" height="201" rx="13" fill="url(#body)" stroke="#999995" stroke-width="2"/>
+  <path d="M82 31 H178 Q185 31 185 39" fill="none" stroke="#ffffff" stroke-width="2.2" opacity="0.9"/>
+  <line x1="72" y1="149" x2="188" y2="149" stroke="#aeaeaa" stroke-width="2"/>
+  <rect x="108" y="50" width="43" height="23" rx="2.5" fill="#d2d2cf" stroke="#aaa9a6" stroke-width="1.4"/>
+  <rect x="111" y="53" width="37" height="17" rx="1.2" fill="url(#screen)" stroke="#656b60" stroke-width="1.2"/>
+  <g fill="#555d52">
+    <rect x="115" y="63" width="3.1" height="4" rx="0.5"/>
+    <rect x="120" y="60" width="3.1" height="7" rx="0.5"/>
+    <rect x="125" y="57" width="3.1" height="10" rx="0.5"/>
+    <rect x="130" y="54.5" width="3.1" height="12.5" rx="0.5"/>
+    <rect x="135" y="58.5" width="3.1" height="8.5" rx="0.5"/>
+  </g>
+  <polyline points="139.5,61.5 143,61.5 145,57.5 147.2,65.5 149.3,55 151.5,61.5 155.5,61.5" fill="none" stroke="#dfff31" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" filter="url(#greenGlow)"/>
+  <circle cx="171" cy="46" r="10.5" fill="#d0c7b7" stroke="#8a867e" stroke-width="1.4"/>
+  <circle cx="171" cy="46" r="5.4" fill="#393939" stroke="#242424" stroke-width="1"/>
+  <circle cx="165" cy="63.5" r="2.2" fill="#303030"/>
+  <circle cx="177" cy="63.5" r="2.2" fill="#303030"/>
+  <circle cx="129" cy="86" r="5" fill="#bdea19" stroke="#6f8215" stroke-width="1.5" filter="url(#greenGlow)"/>
+  <circle cx="129" cy="86" r="3.2" fill="#ccf12d"/>
+  <g stroke="#9c9c99" stroke-width="1.2" fill="none" stroke-linejoin="round">
+    <path d="M160 78 h7 v5 h-7 z M167 80.5 h4"/>
+    <path d="M175 78 h7 v5 h-7 z M182 80.5 h3"/>
+  </g>
+  <line x1="106" y1="101" x2="149" y2="101" stroke="#9f9f9b" stroke-width="3.3" stroke-linecap="round"/>
+  <line x1="109" y1="101" x2="146" y2="101" stroke="#d7d7d4" stroke-width="1.7" stroke-linecap="round"/>
+  <rect x="124" y="96.5" width="10" height="9" rx="3.2" fill="#ddd3c3" stroke="#867e72" stroke-width="1.3"/>
+  <path d="M127 105.5 v4.5 h4 v-4.5" fill="none" stroke="#82827e" stroke-width="1.2"/>
+  <rect x="126.5" y="109.5" width="5.5" height="6.5" rx="1" fill="#efefec" stroke="#999995" stroke-width="1"/>
+  <circle cx="129.25" cy="112.1" r="0.7" fill="#858581"/>
+  <line x1="106" y1="164" x2="149" y2="164" stroke="#9f9f9b" stroke-width="3.3" stroke-linecap="round"/>
+  <line x1="109" y1="164" x2="146" y2="164" stroke="#d7d7d4" stroke-width="1.7" stroke-linecap="round"/>
+  <rect x="124" y="159.5" width="10" height="9" rx="3.2" fill="#ddd3c3" stroke="#867e72" stroke-width="1.3"/>
+  <path d="M127 168.5 v4.5 h4 v-4.5" fill="none" stroke="#82827e" stroke-width="1.2"/>
+  <rect x="126.5" y="172.5" width="5.5" height="6.5" rx="1" fill="#efefec" stroke="#999995" stroke-width="1"/>
+  <circle cx="129.25" cy="175.1" r="0.7" fill="#858581"/>
+  <path d="M72 180 H84 V176 H96 V180 H109 V229 H84 Q72 229 72 217 Z" fill="url(#greenPanel)" stroke="#758918" stroke-width="1.8"/>
+  <path d="M75 183 H86 V179 H94 V183 H105" fill="none" stroke="#e7ff50" stroke-width="1.2" opacity="0.7"/>
 </svg>
