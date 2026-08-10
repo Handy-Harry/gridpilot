@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3 - 2026-08-10
+
+- Limit the maximum grid-import setting to 10,000 W.
+
 ## 0.1.2 - 2026-08-10
 
 - Store all fixed control parameters in GridPilot config-entry options.
