@@ -4,9 +4,10 @@
 
 # GridPilot
 
-GridPilot is a Home Assistant energy orchestration integration for batteries,
-solar production and EV charging. It combines a safe calculation engine with a
-compact battery flow dashboard card.
+GridPilot is een Home Assistant integratie voor energiebeheer, gericht op het bewaken en zo laag mogelijk houden van het capaciteitstarief. Daarnaast biedt GridPilot ondersteuning voor het beheer van thuisbatterijen, zonne-energieproductie en het laden van elektrische voertuigen. De integratie combineert een veilige rekenmodule met een compacte dashboardkaart voor het visualiseren van batterij- en energiestromen.
+
+GridPilot is a Home Assistant energy management integration focused on monitoring and minimizing the capacity tariff. It also provides support for managing home batteries, solar energy production, and EV charging. The integration combines a safe calculation engine with a compact dashboard card for visualizing battery and energy flows.
+
 
 ## Current status
 
