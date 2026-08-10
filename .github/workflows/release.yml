@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "SemVer version without v prefix"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: |
+          python - <<'PY'
+          import json
+          import os
+          version = os.environ["VERSION"]
+          with open("custom_components/gridpilot/manifest.json", encoding="utf-8") as file:
+              manifest = json.load(file)
+          if manifest["version"] != version:
+              raise SystemExit(f"manifest version {manifest['version']} != {version}")
+          PY
+        env:
+          VERSION: ${{ inputs.version }}
+      - run: node --check custom_components/gridpilot/frontend/gridpilot-card.js
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          tag_name: v${{ inputs.version }}
+          generate_release_notes: true

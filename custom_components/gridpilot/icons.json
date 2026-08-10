@@ -1,0 +1,14 @@
+{
+  "services": {},
+  "entity": {
+    "sensor": {
+      "calculated_grid_setpoint": {"default": "mdi:transmission-tower-import"},
+      "operating_mode": {"default": "mdi:state-machine"},
+      "control_reason": {"default": "mdi:text-box-search-outline"}
+    },
+    "binary_sensor": {
+      "measurements_valid": {"default": "mdi:check-decagram-outline"},
+      "shadow_mode": {"default": "mdi:eye-outline"}
+    }
+  }
+}

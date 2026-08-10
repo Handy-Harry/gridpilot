@@ -1,0 +1,84 @@
+{
+  "title": "GridPilot",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Choose a configuration profile",
+        "description": "GridPilot starts in read-only shadow mode and will not control devices.",
+        "data": {
+          "profile": "Configuration profile"
+        }
+      },
+      "battery": {
+        "title": "Configure battery measurements",
+        "data": {
+          "battery_soc": "Battery state of charge",
+          "battery_power": "Battery power"
+        }
+      },
+      "energy": {
+        "title": "Configure grid and home load",
+        "description": "Select either one total home-load sensor or all three phase sensors.",
+        "data": {
+          "grid_setpoint": "Grid setpoint output",
+          "max_grid_power": "Maximum grid power",
+          "home_load": "Total home load (optional)",
+          "home_load_l1": "Home load phase L1 (optional)",
+          "home_load_l2": "Home load phase L2 (optional)",
+          "home_load_l3": "Home load phase L3 (optional)"
+        }
+      }
+    },
+    "error": {
+      "load_entities_required": "Select one total load sensor or all three phase sensors"
+    },
+    "abort": {
+      "already_configured": "GridPilot is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configure the battery curve",
+        "data": {
+          "minimum_soc": "SOC for maximum charging",
+          "charge_soc": "SOC for full home-load compensation",
+          "normal_soc": "SOC for normal battery operation",
+          "minimum_charge_power": "Minimum charging power"
+        }
+      }
+    },
+    "error": {
+      "invalid_soc_order": "SOC thresholds must be ordered minimum < charge < normal"
+    }
+  },
+  "selector": {
+    "profile": {
+      "options": {
+        "generic": "Generic",
+        "victron": "Victron-oriented"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "calculated_grid_setpoint": {"name": "Calculated grid setpoint"},
+      "operating_mode": {
+        "name": "Operating mode",
+        "state": {
+          "unavailable": "Unavailable",
+          "max_charging": "Maximum charging",
+          "charging": "Charging",
+          "neutral": "Neutral",
+          "tapering": "Tapering",
+          "normal": "Normal"
+        }
+      },
+      "control_reason": {"name": "Control reason"}
+    },
+    "binary_sensor": {
+      "measurements_valid": {"name": "Measurements valid"},
+      "shadow_mode": {"name": "Shadow mode"}
+    }
+  }
+}

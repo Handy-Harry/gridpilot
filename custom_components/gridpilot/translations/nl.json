@@ -1,0 +1,79 @@
+{
+  "title": "GridPilot",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configuratieprofiel kiezen",
+        "description": "GridPilot start in alleen-lezen schaduwmodus en stuurt geen apparaten aan.",
+        "data": {
+          "profile": "Configuratieprofiel"
+        }
+      },
+      "battery": {
+        "title": "Batterijmetingen configureren",
+        "data": {
+          "battery_soc": "Laadstatus batterij",
+          "battery_power": "Batterijvermogen"
+        }
+      },
+      "energy": {
+        "title": "Net en huisverbruik configureren",
+        "description": "Selecteer één totale verbruikssensor of alle drie de fasesensoren.",
+        "data": {
+          "grid_setpoint": "Netsetpoint-uitgang",
+          "max_grid_power": "Maximaal netvermogen",
+          "home_load": "Totaal huisverbruik (optioneel)",
+          "home_load_l1": "Huisverbruik fase L1 (optioneel)",
+          "home_load_l2": "Huisverbruik fase L2 (optioneel)",
+          "home_load_l3": "Huisverbruik fase L3 (optioneel)"
+        }
+      }
+    },
+    "error": {
+      "load_entities_required": "Selecteer één totale verbruikssensor of alle drie de fasesensoren"
+    },
+    "abort": {"already_configured": "GridPilot is al geconfigureerd"}
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Batterijcurve configureren",
+        "data": {
+          "minimum_soc": "SOC voor maximaal bijladen",
+          "charge_soc": "SOC voor volledige compensatie van het huisverbruik",
+          "normal_soc": "SOC voor normale batterijwerking",
+          "minimum_charge_power": "Minimaal laadvermogen"
+        }
+      }
+    },
+    "error": {
+      "invalid_soc_order": "SOC-grenzen moeten minimum < laden < normaal zijn"
+    }
+  },
+  "selector": {
+    "profile": {
+      "options": {"generic": "Generiek", "victron": "Victron-gericht"}
+    }
+  },
+  "entity": {
+    "sensor": {
+      "calculated_grid_setpoint": {"name": "Berekend netsetpoint"},
+      "operating_mode": {
+        "name": "Bedrijfsmodus",
+        "state": {
+          "unavailable": "Niet beschikbaar",
+          "max_charging": "Maximaal bijladen",
+          "charging": "Bijladen",
+          "neutral": "Neutraal",
+          "tapering": "Afbouwen",
+          "normal": "Normaal"
+        }
+      },
+      "control_reason": {"name": "Reden van regeling"}
+    },
+    "binary_sensor": {
+      "measurements_valid": {"name": "Meetwaarden geldig"},
+      "shadow_mode": {"name": "Schaduwmodus"}
+    }
+  }
+}
