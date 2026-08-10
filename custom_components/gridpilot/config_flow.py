@@ -223,7 +223,7 @@ def _control_options_schema(current: dict[str, Any]) -> vol.Schema:
                 selector.NumberSelectorConfig(
                     min=0,
                     max=10_000,
-                    step=10,
+                    step=100,
                     unit_of_measurement="W",
                 )
             ),

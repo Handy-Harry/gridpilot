@@ -6,7 +6,7 @@ compact battery flow dashboard card.
 
 ## Current status
 
-Version `0.1.3` is a public preview. It operates permanently in shadow mode:
+Version `0.1.4` is a public preview. It operates permanently in shadow mode:
 GridPilot reads configured entities and publishes its calculated battery grid
 setpoint, but it never writes to an inverter or charger.
 

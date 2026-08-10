@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4 - 2026-08-10
+
+- Set the maximum grid-import adjustment step to 100 W.
+
 ## 0.1.3 - 2026-08-10
 
 - Limit the maximum grid-import setting to 10,000 W.
