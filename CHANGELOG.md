@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0 - 2026-08-11
+
+- Add opt-in battery setpoint actuation, disabled by default.
+- Reset the setpoint to 0 W when measurements become invalid or active control unloads.
+- Expose actuation health and bounded diagnostics.
+
 ## 0.1.11 - 2026-08-11
 
 - Update the GridPilot meter artwork with the supplied v5 design.

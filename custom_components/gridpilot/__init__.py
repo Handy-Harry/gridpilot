@@ -72,14 +72,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) ->
     controller = GridPilotController(hass, entry)
     entry.runtime_data = GridPilotRuntime(controller=controller)
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
-    await controller.async_start()
     await hass.config_entries.async_forward_entry_setups(entry, platforms)
+    await controller.async_start()
     return True
 
 
-async def async_migrate_entry(
-    hass: HomeAssistant, entry: GridPilotConfigEntry
-) -> bool:
+async def async_migrate_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) -> bool:
     """Move version 1 control parameters into config-entry options."""
     if entry.version > 2:
         return False
@@ -140,6 +138,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) -
     """Unload GridPilot."""
     from homeassistant.const import Platform
 
+    if not await entry.runtime_data.controller.async_shutdown():
+        return False
     return await hass.config_entries.async_unload_platforms(
         entry, [Platform.SENSOR, Platform.BINARY_SENSOR]
     )

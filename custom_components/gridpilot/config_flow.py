@@ -14,6 +14,7 @@ from .const import (
     CONF_BATTERY_POWER,
     CONF_BATTERY_SOC,
     CONF_CHARGE_SOC,
+    CONF_ENABLE_ACTUATION,
     CONF_GRID_SETPOINT,
     CONF_HOME_LOAD,
     CONF_HOME_LOAD_L1,
@@ -25,6 +26,7 @@ from .const import (
     CONF_NORMAL_SOC,
     CONF_PROFILE,
     DEFAULT_CHARGE_SOC,
+    DEFAULT_ENABLE_ACTUATION,
     DEFAULT_MAX_GRID_POWER,
     DEFAULT_MINIMUM_CHARGE_POWER,
     DEFAULT_MINIMUM_SOC,
@@ -264,5 +266,9 @@ def _control_options_schema(current: dict[str, Any]) -> vol.Schema:
                     unit_of_measurement="W",
                 )
             ),
+            vol.Required(
+                CONF_ENABLE_ACTUATION,
+                default=current.get(CONF_ENABLE_ACTUATION, DEFAULT_ENABLE_ACTUATION),
+            ): selector.BooleanSelector(),
         }
     )

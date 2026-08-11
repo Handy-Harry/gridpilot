@@ -28,7 +28,12 @@ def curve() -> BatteryCurve:
 
 @pytest.mark.parametrize(
     ("value", "unit", "expected"),
-    [(500, "W", 500), (1.5, "kW", 1500), (0.002, "MW", 2000)],
+    [
+        (500, "W", 500),
+        (1.5, "kW", 1500),
+        (0.002, "MW", 2000),
+        (2000, "mW", 2),
+    ],
 )
 def test_normalize_power(value: float, unit: str, expected: float) -> None:
     assert normalize_power(value, unit) == expected

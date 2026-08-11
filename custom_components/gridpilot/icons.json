@@ -8,7 +8,8 @@
     },
     "binary_sensor": {
       "measurements_valid": {"default": "mdi:check-decagram-outline"},
-      "shadow_mode": {"default": "mdi:eye-outline"}
+      "shadow_mode": {"default": "mdi:eye-outline"},
+      "actuation_healthy": {"default": "mdi:shield-check-outline"}
     }
   }
 }

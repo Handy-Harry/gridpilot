@@ -10,9 +10,9 @@ GridPilot is a Home Assistant energy management integration focused on monitorin
 
 ## Current status
 
-Version `0.1.11` is a public preview. It operates permanently in shadow mode:
-GridPilot reads configured entities and publishes its calculated battery grid
-setpoint, but it never writes to an inverter or charger.
+Version `0.2.0` is a public preview. It remains in shadow mode by default.
+Battery setpoint actuation can be enabled explicitly from the integration options
+after the existing battery controller has been disabled.
 
 ## Initial features
 
@@ -30,12 +30,11 @@ Copy `custom_components/gridpilot` into the Home Assistant configuration
 directory under `custom_components`, restart Home Assistant, and add GridPilot
 from **Settings > Devices & services**.
 
-Do not disable an existing controller yet. GridPilot `0.1.x` is intended to run
-alongside it for comparison.
+Keep the existing controller enabled while comparing GridPilot in shadow mode.
+Disable it before enabling GridPilot's active battery control.
 
 ## Planned releases
 
-- `0.2`: opt-in battery actuation and Victron preset.
 - `0.3`: PV surplus and EV current control.
 - `0.4`: battery-to-EV and manual charging modes.
 - `1.0`: stable migration and public HACS release.

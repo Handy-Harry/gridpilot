@@ -5,10 +5,11 @@ from typing import Final
 
 DOMAIN: Final = "gridpilot"
 NAME: Final = "GridPilot"
-VERSION: Final = "0.1.11"
+VERSION: Final = "0.2.0"
 
 PLATFORMS: Final = ["sensor", "binary_sensor"]
 UPDATE_INTERVAL: Final = timedelta(minutes=1)
+MIN_ACTUATION_INTERVAL: Final = timedelta(seconds=10)
 
 CONF_PROFILE: Final = "profile"
 CONF_BATTERY_SOC: Final = "battery_soc"
@@ -24,12 +25,14 @@ CONF_MINIMUM_SOC: Final = "minimum_soc"
 CONF_CHARGE_SOC: Final = "charge_soc"
 CONF_NORMAL_SOC: Final = "normal_soc"
 CONF_MINIMUM_CHARGE_POWER: Final = "minimum_charge_power"
+CONF_ENABLE_ACTUATION: Final = "enable_actuation"
 
 DEFAULT_MINIMUM_SOC: Final = 10.0
 DEFAULT_CHARGE_SOC: Final = 15.0
 DEFAULT_NORMAL_SOC: Final = 20.0
 DEFAULT_MINIMUM_CHARGE_POWER: Final = 300.0
 DEFAULT_MAX_GRID_POWER: Final = 2_900.0
+DEFAULT_ENABLE_ACTUATION: Final = False
 
 PROFILE_GENERIC: Final = "generic"
 PROFILE_VICTRON: Final = "victron"

@@ -25,7 +25,7 @@ class MeasurementsValidBinarySensor(GridPilotEntity, BinarySensorEntity):
 
 
 class ShadowModeBinarySensor(GridPilotEntity, BinarySensorEntity):
-    """Confirm that this preview performs no writes."""
+    """Whether GridPilot is calculating without writing."""
 
     _attr_translation_key = "shadow_mode"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
@@ -36,7 +36,22 @@ class ShadowModeBinarySensor(GridPilotEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
-        return True
+        return not self.controller.actuation_enabled
+
+
+class ActuationHealthyBinarySensor(GridPilotEntity, BinarySensorEntity):
+    """Whether active setpoint control is operating without an error."""
+
+    _attr_translation_key = "actuation_healthy"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, entry: GridPilotConfigEntry) -> None:
+        super().__init__(entry)
+        self._attr_unique_id = f"{entry.entry_id}_actuation_healthy"
+
+    @property
+    def is_on(self) -> bool:
+        return self.controller.actuation_healthy
 
 
 async def async_setup_entry(
@@ -46,5 +61,9 @@ async def async_setup_entry(
 ) -> None:
     """Set up GridPilot binary sensors."""
     async_add_entities(
-        [MeasurementsValidBinarySensor(entry), ShadowModeBinarySensor(entry)]
+        [
+            MeasurementsValidBinarySensor(entry),
+            ShadowModeBinarySensor(entry),
+            ActuationHealthyBinarySensor(entry),
+        ]
     )

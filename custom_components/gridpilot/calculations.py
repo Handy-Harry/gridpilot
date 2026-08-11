@@ -36,13 +36,15 @@ class BatteryCurve:
 
 def normalize_power(value: float, unit: str | None) -> float:
     """Normalize a power value to watts."""
-    normalized_unit = (unit or "W").strip().lower()
-    if normalized_unit == "w":
+    normalized_unit = (unit or "W").strip()
+    if normalized_unit in {"W", "w"}:
         return value
-    if normalized_unit == "kw":
+    if normalized_unit in {"kW", "kw"}:
         return value * 1_000
-    if normalized_unit == "mw":
+    if normalized_unit == "MW":
         return value * 1_000_000
+    if normalized_unit == "mW":
+        return value / 1_000
     raise ValueError(f"Unsupported power unit: {unit}")
 
 

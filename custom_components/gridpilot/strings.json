@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Choose a configuration profile",
-        "description": "GridPilot starts in read-only shadow mode and will not control devices.",
+        "description": "GridPilot starts in shadow mode. Active battery control remains disabled until explicitly enabled from the integration options.",
         "data": {
           "profile": "Configuration profile"
         },
@@ -35,7 +35,7 @@
           "home_load_l3": "Home load phase L3 (optional)"
         },
         "data_description": {
-          "grid_setpoint": "Writable number entity for the requested grid import in watts. GridPilot 0.1 only validates this mapping and never writes to it. Victron example: number.gx_device_ac_power_setpoint.",
+          "grid_setpoint": "Writable number entity for the requested grid import in watts. GridPilot only writes to it when active control is explicitly enabled. Victron example: number.gx_device_ac_power_setpoint.",
           "home_load": "Sensor containing the instantaneous total home consumption in W or kW. When selected, it takes precedence over the phase sensors.",
           "home_load_l1": "Instantaneous home consumption on phase L1 in W or kW. Complete L1, L2 and L3 when no total home-load sensor is selected.",
           "home_load_l2": "Instantaneous home consumption on phase L2 in W or kW. Complete L1, L2 and L3 when no total home-load sensor is selected.",
@@ -50,19 +50,22 @@
           "minimum_soc": "SOC for maximum charging",
           "charge_soc": "SOC for full home-load compensation",
           "normal_soc": "SOC for normal battery operation",
-          "minimum_charge_power": "Minimum charging power"
+          "minimum_charge_power": "Minimum charging power",
+          "enable_actuation": "Enable active battery control"
         },
         "data_description": {
           "max_grid_power": "Positive maximum permitted grid import in watts. This fixed value replaces the need for a separate helper. Default: 2900 W.",
           "minimum_soc": "At or below this SOC, GridPilot requests the maximum permitted grid import. Default: 10%.",
           "charge_soc": "At this SOC, the calculated setpoint equals the current home load. Below it, extra battery charging power is added. Default: 15%.",
           "normal_soc": "At or above this SOC, the calculated setpoint is 0 W. Between the charge and normal thresholds, grid compensation tapers to zero. Default: 20%.",
-          "minimum_charge_power": "Minimum extra charging power requested below the charge threshold, before applying the maximum grid-power limit. Default: 300 W."
+          "minimum_charge_power": "Minimum extra charging power requested below the charge threshold, before applying the maximum grid-power limit. Default: 300 W.",
+          "enable_actuation": "Danger: enable only after every other controller writing to the grid setpoint has been disabled. Invalid measurements and unloads reset the setpoint to 0 W. Default: off."
         }
       }
     },
     "error": {
-      "load_entities_required": "Select one total load sensor or all three phase sensors"
+      "load_entities_required": "Select one total load sensor or all three phase sensors",
+      "invalid_soc_order": "SOC thresholds must be ordered minimum < charge < normal"
     },
     "abort": {
       "already_configured": "GridPilot is already configured"
@@ -72,20 +75,22 @@
     "step": {
       "init": {
         "title": "Configure the battery curve",
-        "description": "GridPilot calculates a grid setpoint from these ordered SOC thresholds. The maximum grid-power limit always caps the result.",
+        "description": "GridPilot calculates a grid setpoint from these ordered SOC thresholds. Active control is optional and must not run alongside another setpoint controller.",
         "data": {
           "max_grid_power": "Maximum grid import",
           "minimum_soc": "SOC for maximum charging",
           "charge_soc": "SOC for full home-load compensation",
           "normal_soc": "SOC for normal battery operation",
-          "minimum_charge_power": "Minimum charging power"
+          "minimum_charge_power": "Minimum charging power",
+          "enable_actuation": "Enable active battery control"
         },
         "data_description": {
           "max_grid_power": "Positive maximum permitted grid import in watts, stored inside GridPilot. Default: 2900 W.",
           "minimum_soc": "At or below this SOC, GridPilot requests the maximum permitted grid import. Default: 10%.",
           "charge_soc": "At this SOC, the calculated setpoint equals the current home load. Below it, extra battery charging power is added. Default: 15%.",
           "normal_soc": "At or above this SOC, the calculated setpoint is 0 W. Between the charge and normal thresholds, grid compensation tapers to zero. Default: 20%.",
-          "minimum_charge_power": "Minimum extra charging power requested below the charge threshold, before applying the maximum grid-power limit. Default: 300 W."
+          "minimum_charge_power": "Minimum extra charging power requested below the charge threshold, before applying the maximum grid-power limit. Default: 300 W.",
+          "enable_actuation": "Danger: enable only after every other controller writing to the grid setpoint has been disabled. Invalid measurements and unloads reset the setpoint to 0 W. Default: off."
         }
       }
     },
@@ -119,7 +124,8 @@
     },
     "binary_sensor": {
       "measurements_valid": {"name": "Measurements valid"},
-      "shadow_mode": {"name": "Shadow mode"}
+      "shadow_mode": {"name": "Shadow mode"},
+      "actuation_healthy": {"name": "Actuation healthy"}
     }
   }
 }
