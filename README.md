@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="custom_components/gridpilot/brand/logo.png" alt="GridPilot capacity tariff meter" width="240">
+  <img src="custom_components/gridpilot/brand/icon.svg" alt="GridPilot capacity tariff meter" width="240">
 </p>
 
 # GridPilot
@@ -10,7 +10,7 @@ GridPilot is a Home Assistant energy management integration focused on monitorin
 
 ## Current status
 
-Version `0.1.10` is a public preview. It operates permanently in shadow mode:
+Version `0.1.11` is a public preview. It operates permanently in shadow mode:
 GridPilot reads configured entities and publishes its calculated battery grid
 setpoint, but it never writes to an inverter or charger.
 
