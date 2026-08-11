@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0 - 2026-08-11
+
+- Add coordinated PV, manual and battery-to-EV charging strategies using existing UI-managed helpers.
+- Add safe 6 A strategy handoff, immediate 5 A pauses and reserve-SOC/time-to-go control.
+- Add strategy diagnostics, config-entry migration v5 and legacy override compatibility.
+- Validate with 65 tests, Ruff, JSON/translation checks and frontend syntax checks.
+
 ## 0.3.0 - 2026-08-11
 
 - Calculate PV surplus and phase-aware EV target current inside GridPilot.

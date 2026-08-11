@@ -8,9 +8,10 @@ import math
 from collections import deque
 from collections.abc import Callable
 from dataclasses import replace
-from datetime import datetime
+from datetime import datetime, timedelta
 from statistics import median
 from time import monotonic
+from typing import Any
 
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
@@ -19,6 +20,7 @@ from homeassistant.helpers.event import (
     async_track_state_change_event,
     async_track_time_interval,
 )
+from homeassistant.util import dt as dt_util
 
 from .calculations import BatteryCurve, calculate_battery_decision, normalize_power
 from .const import (
@@ -28,10 +30,16 @@ from .const import (
     CONF_CHARGE_SOC,
     CONF_ENABLE_ACTUATION,
     CONF_ENABLE_EV_ACTUATION,
+    CONF_EV_BATTERY_MIN_SOC,
+    CONF_EV_BATTERY_SOC,
+    CONF_EV_BATTERY_TARGET_TIME,
+    CONF_EV_BATTERY_TIME_TO_GO,
     CONF_EV_CONNECTION_STATE,
     CONF_EV_CURRENT_FEEDBACK,
     CONF_EV_CURRENT_LIMIT,
     CONF_EV_DISCONNECTED_STATE,
+    CONF_EV_MANUAL_CURRENT,
+    CONF_EV_MANUAL_MODE,
     CONF_EV_MAX_CURRENT,
     CONF_EV_MODE,
     CONF_EV_OVERRIDE,
@@ -54,6 +62,7 @@ from .const import (
     DEFAULT_ENABLE_ACTUATION,
     DEFAULT_ENABLE_EV_ACTUATION,
     DEFAULT_EV_DISCONNECTED_STATE,
+    DEFAULT_EV_MANUAL_MODE,
     DEFAULT_EV_MAX_CURRENT,
     DEFAULT_EV_PRIORITY,
     DEFAULT_EV_PV_MODE,
@@ -78,12 +87,21 @@ from .const import (
     EV_START_CURRENT,
     EV_STOP_CURRENT,
     EV_STOP_DELAY,
+    EV_STRATEGY_BATTERY_TO_EV,
+    EV_STRATEGY_MANUAL,
+    EV_STRATEGY_NONE,
+    EV_STRATEGY_PV,
     EV_UPDATE_INTERVAL,
     MIN_ACTUATION_INTERVAL,
     MODE_UNAVAILABLE,
     UPDATE_INTERVAL,
 )
-from .ev_calculations import calculate_ev_pv_decision, update_battery_full_hysteresis
+from .ev_calculations import (
+    calculate_battery_to_ev_decision,
+    calculate_ev_pv_decision,
+    calculate_manual_ev_decision,
+    update_battery_full_hysteresis,
+)
 from .models import ControlDecision, EVControlDecision
 from .runtime import GridPilotConfigEntry
 
@@ -123,6 +141,7 @@ class GridPilotController:
         self.last_ev_actuation_error: str | None = None
         self._last_ev_write_monotonic: float | None = None
         self._ev_requires_pause = False
+        self._last_ev_strategy = EV_STRATEGY_NONE
         self._battery_full = False
         self._ev_stop_started: float | None = None
         self._ev_restart_until: float | None = None
@@ -137,6 +156,7 @@ class GridPilotController:
             if key
             in {
                 CONF_BATTERY_SOC,
+                CONF_BATTERY_POWER,
                 CONF_HOME_LOAD,
                 CONF_HOME_LOAD_L1,
                 CONF_HOME_LOAD_L2,
@@ -159,6 +179,11 @@ class GridPilotController:
                 CONF_EV_PHASE_MODE,
                 CONF_EV_MODE,
                 CONF_EV_OVERRIDE,
+                CONF_EV_MANUAL_CURRENT,
+                CONF_EV_BATTERY_SOC,
+                CONF_EV_BATTERY_MIN_SOC,
+                CONF_EV_BATTERY_TIME_TO_GO,
+                CONF_EV_BATTERY_TARGET_TIME,
             }
             and value
         )
@@ -173,17 +198,11 @@ class GridPilotController:
             async_track_time_interval(
                 self.hass,
                 self._async_periodic_refresh,
-                UPDATE_INTERVAL,
+                EV_UPDATE_INTERVAL
+                if self._ev_current_limit_entity
+                else UPDATE_INTERVAL,
             )
         )
-        if self.entry.options.get(CONF_EV_CURRENT_LIMIT):
-            self.entry.async_on_unload(
-                async_track_time_interval(
-                    self.hass,
-                    self._async_periodic_refresh,
-                    EV_UPDATE_INTERVAL,
-                )
-            )
         await self.async_refresh()
 
     async def _async_state_changed(self, event: Event[EventStateChangedData]) -> None:
@@ -312,44 +331,34 @@ class GridPilotController:
         self._requires_neutralization = not math.isclose(requested, 0.0, abs_tol=1.0)
 
     def _calculate_ev_decision(self) -> None:
-        """Calculate one PV-surplus EV-current decision."""
+        """Select and calculate one EV charging strategy."""
         options = self.entry.options
-        required = {
-            CONF_GRID_POWER,
-            CONF_EV_POWER,
-            CONF_EV_CONNECTION_STATE,
-            CONF_EV_CURRENT_LIMIT,
-            CONF_EV_VOLTAGE,
-            CONF_EV_PHASE_MODE,
-            CONF_EV_MODE,
-        }
-        missing = sorted(key for key in required if not options.get(key))
+        previous_strategy = self.ev_decision.strategy
+        strategy = EV_STRATEGY_NONE
+        common = {CONF_EV_CONNECTION_STATE, CONF_EV_CURRENT_LIMIT}
+        missing = sorted(key for key in common if not options.get(key))
         if missing:
-            self.ev_decision = EVControlDecision(
-                valid=False,
-                mode=EV_MODE_UNAVAILABLE,
-                reason=f"EV control is not configured: {', '.join(missing)}",
-                requested_current=(
-                    EV_PAUSE_CURRENT
-                    if self._ev_actuation_enabled and self._ev_current_limit_entity
-                    else None
-                ),
+            self._set_unavailable_ev_decision(
+                f"EV control is not configured: {', '.join(missing)}", strategy
             )
             return
 
         try:
-            soc = self._numeric_state(self.entry.data[CONF_BATTERY_SOC])
-            self._battery_full = update_battery_full_hysteresis(soc, self._battery_full)
-            mode = self._state(options[CONF_EV_MODE])
-            pv_mode = str(options.get(CONF_EV_PV_MODE, DEFAULT_EV_PV_MODE))
-            override = options.get(CONF_EV_OVERRIDE)
-            if mode != pv_mode or (override and self._state(override) == "on"):
+            strategy = self._selected_ev_strategy(options)
+            if strategy == EV_STRATEGY_NONE:
                 self._clear_ev_samples()
+                override = options.get(CONF_EV_OVERRIDE)
+                external_override = bool(
+                    override and self._state(str(override)) == "on"
+                )
                 self.ev_decision = EVControlDecision(
                     valid=True,
                     mode=EV_MODE_INACTIVE,
-                    reason="EV charging mode is not PV charging",
-                    battery_full=self._battery_full,
+                    reason=(
+                        "External battery-to-EV override remains active"
+                        if external_override
+                        else "No GridPilot EV charging strategy is selected"
+                    ),
                 )
                 return
 
@@ -358,106 +367,209 @@ class GridPilotController:
                 options.get(CONF_EV_DISCONNECTED_STATE, DEFAULT_EV_DISCONNECTED_STATE)
             )
             if connection_state == disconnected:
+                self._clear_ev_samples()
                 self.ev_decision = EVControlDecision(
                     valid=True,
                     mode=EV_MODE_DISCONNECTED,
                     reason="EV is not connected",
-                    battery_full=self._battery_full,
+                    strategy=strategy,
                     requested_current=EV_PAUSE_CURRENT,
                 )
                 return
 
-            if (
-                not self.decision.valid
-                or (self.decision.requested_grid_setpoint or 0) > 0
-            ):
-                self.ev_decision = EVControlDecision(
-                    valid=True,
-                    mode=EV_MODE_BLOCKED,
-                    reason="Battery grid charging blocks PV EV charging",
-                    battery_full=self._battery_full,
-                    requested_current=EV_PAUSE_CURRENT,
+            required = {
+                EV_STRATEGY_PV: {
+                    CONF_GRID_POWER,
+                    CONF_EV_POWER,
+                    CONF_EV_VOLTAGE,
+                    CONF_EV_PHASE_MODE,
+                },
+                EV_STRATEGY_MANUAL: {CONF_EV_MANUAL_CURRENT},
+                EV_STRATEGY_BATTERY_TO_EV: {
+                    CONF_GRID_POWER,
+                    CONF_EV_BATTERY_SOC,
+                    CONF_EV_BATTERY_MIN_SOC,
+                    CONF_EV_BATTERY_TIME_TO_GO,
+                    CONF_EV_BATTERY_TARGET_TIME,
+                },
+            }[strategy]
+            missing = sorted(key for key in required if not options.get(key))
+            if missing:
+                raise ValueError(
+                    f"{strategy} EV control is not configured: {', '.join(missing)}"
                 )
-                return
 
             self._validate_ev_actuator()
-            phase_count = self._phase_count(options[CONF_EV_PHASE_MODE])
-            battery_power = self._power_state(self.entry.data[CONF_BATTERY_POWER])
-            if not bool(
-                options.get(
-                    CONF_BATTERY_CHARGE_POSITIVE,
-                    DEFAULT_BATTERY_CHARGE_POSITIVE,
+            if strategy == EV_STRATEGY_PV:
+                self._calculate_pv_ev_decision(options, previous_strategy)
+            elif strategy == EV_STRATEGY_MANUAL:
+                self._clear_ev_samples()
+                self.ev_decision = calculate_manual_ev_decision(
+                    requested_current=self._current_state(
+                        options[CONF_EV_MANUAL_CURRENT]
+                    ),
+                    max_current=float(
+                        options.get(CONF_EV_MAX_CURRENT, DEFAULT_EV_MAX_CURRENT)
+                    ),
                 )
-            ):
-                battery_power = -battery_power
-            raw = calculate_ev_pv_decision(
-                ev_power=self._power_state(options[CONF_EV_POWER]),
-                battery_power=battery_power,
-                grid_power=self._power_state(options[CONF_GRID_POWER]),
-                voltage=self._numeric_state(options[CONF_EV_VOLTAGE]),
-                phase_count=phase_count,
-                priority=float(options.get(CONF_EV_PRIORITY, DEFAULT_EV_PRIORITY)),
-                max_current=float(
-                    options.get(CONF_EV_MAX_CURRENT, DEFAULT_EV_MAX_CURRENT)
-                ),
-                safety_margin=float(
-                    options.get(CONF_PV_SAFETY_MARGIN, DEFAULT_PV_SAFETY_MARGIN)
-                ),
-                battery_full=self._battery_full,
-            )
-            now = monotonic()
-            available = self._sample_median(
-                self._ev_power_samples,
-                raw.available_pv_power or 0,
-                EV_POWER_MEDIAN_WINDOW.total_seconds(),
-                now,
-            )
-            smoothed = calculate_ev_pv_decision(
-                ev_power=0,
-                battery_power=available,
-                grid_power=0,
-                voltage=self._numeric_state(options[CONF_EV_VOLTAGE]),
-                phase_count=phase_count,
-                priority=float(options.get(CONF_EV_PRIORITY, DEFAULT_EV_PRIORITY)),
-                max_current=float(
-                    options.get(CONF_EV_MAX_CURRENT, DEFAULT_EV_MAX_CURRENT)
-                ),
-                safety_margin=0,
-                battery_full=self._battery_full,
-            )
-            target = smoothed.target_current or 0
-            target_median = self._sample_median(
-                self._ev_current_samples,
-                target,
-                EV_CURRENT_MEDIAN_WINDOW.total_seconds(),
-                now,
-            )
-            requested, control_mode, reason = self._ev_requested_current(
-                current=self._current_state(
+            else:
+                self._clear_ev_samples()
+                measured_current = self._current_state(
                     options.get(CONF_EV_CURRENT_FEEDBACK)
                     or options[CONF_EV_CURRENT_LIMIT]
-                ),
-                target=target,
-                target_median=target_median,
-                max_current=float(
-                    options.get(CONF_EV_MAX_CURRENT, DEFAULT_EV_MAX_CURRENT)
-                ),
-                now=now,
-            )
-            self.ev_decision = replace(
-                smoothed,
-                mode=control_mode,
-                reason=reason,
-                requested_current=requested,
-            )
+                )
+                self.ev_decision = calculate_battery_to_ev_decision(
+                    current=(
+                        measured_current
+                        if previous_strategy == EV_STRATEGY_BATTERY_TO_EV
+                        else EV_PAUSE_CURRENT
+                    ),
+                    battery_soc=self._numeric_state(self.entry.data[CONF_BATTERY_SOC]),
+                    secondary_soc=self._numeric_state(options[CONF_EV_BATTERY_SOC]),
+                    minimum_soc=self._numeric_state(options[CONF_EV_BATTERY_MIN_SOC]),
+                    time_to_go=self._duration_state(
+                        options[CONF_EV_BATTERY_TIME_TO_GO]
+                    ),
+                    seconds_until_target=self._seconds_until_target(
+                        options[CONF_EV_BATTERY_TARGET_TIME]
+                    ),
+                    grid_power=self._power_state(options[CONF_GRID_POWER]),
+                    max_current=float(
+                        options.get(CONF_EV_MAX_CURRENT, DEFAULT_EV_MAX_CURRENT)
+                    ),
+                )
         except (KeyError, TypeError, ValueError) as err:
+            self._set_unavailable_ev_decision(str(err), strategy)
+
+    def _selected_ev_strategy(self, options: dict[str, Any]) -> str:
+        """Return the selected internal strategy, with battery-to-EV priority."""
+        if (override := options.get(CONF_EV_OVERRIDE)) and self._state(
+            str(override)
+        ) == "on":
+            battery_options = {
+                CONF_GRID_POWER,
+                CONF_EV_BATTERY_SOC,
+                CONF_EV_BATTERY_MIN_SOC,
+                CONF_EV_BATTERY_TIME_TO_GO,
+                CONF_EV_BATTERY_TARGET_TIME,
+            }
+            return (
+                EV_STRATEGY_BATTERY_TO_EV
+                if all(options.get(key) for key in battery_options)
+                else EV_STRATEGY_NONE
+            )
+        mode_entity = options.get(CONF_EV_MODE)
+        if not mode_entity:
+            raise ValueError("EV charging mode is not configured")
+        mode = self._state(str(mode_entity))
+        if mode == str(options.get(CONF_EV_PV_MODE, DEFAULT_EV_PV_MODE)):
+            return EV_STRATEGY_PV
+        if mode == str(options.get(CONF_EV_MANUAL_MODE, DEFAULT_EV_MANUAL_MODE)):
+            return EV_STRATEGY_MANUAL
+        return EV_STRATEGY_NONE
+
+    def _set_unavailable_ev_decision(self, reason: str, strategy: str) -> None:
+        """Publish a fail-safe EV decision for invalid configuration or input."""
+        self.ev_decision = EVControlDecision(
+            valid=False,
+            mode=EV_MODE_UNAVAILABLE,
+            reason=reason,
+            strategy=strategy,
+            battery_full=self._battery_full,
+            requested_current=(
+                EV_PAUSE_CURRENT
+                if self._ev_actuation_enabled and self._ev_current_limit_entity
+                else None
+            ),
+        )
+
+    def _calculate_pv_ev_decision(
+        self, options: dict[str, Any], previous_strategy: str
+    ) -> None:
+        """Calculate the stateful PV-surplus charging strategy."""
+        soc = self._numeric_state(self.entry.data[CONF_BATTERY_SOC])
+        self._battery_full = update_battery_full_hysteresis(soc, self._battery_full)
+        if not self.decision.valid or (self.decision.requested_grid_setpoint or 0) > 0:
             self.ev_decision = EVControlDecision(
-                valid=False,
-                mode=EV_MODE_UNAVAILABLE,
-                reason=str(err),
+                valid=True,
+                mode=EV_MODE_BLOCKED,
+                reason="Battery grid charging blocks PV EV charging",
+                strategy=EV_STRATEGY_PV,
                 battery_full=self._battery_full,
                 requested_current=EV_PAUSE_CURRENT,
             )
+            return
+
+        phase_count = self._phase_count(str(options[CONF_EV_PHASE_MODE]))
+        battery_power = self._power_state(self.entry.data[CONF_BATTERY_POWER])
+        if not bool(
+            options.get(
+                CONF_BATTERY_CHARGE_POSITIVE,
+                DEFAULT_BATTERY_CHARGE_POSITIVE,
+            )
+        ):
+            battery_power = -battery_power
+        max_current = float(options.get(CONF_EV_MAX_CURRENT, DEFAULT_EV_MAX_CURRENT))
+        voltage = self._numeric_state(str(options[CONF_EV_VOLTAGE]))
+        priority = float(options.get(CONF_EV_PRIORITY, DEFAULT_EV_PRIORITY))
+        raw = calculate_ev_pv_decision(
+            ev_power=self._power_state(str(options[CONF_EV_POWER])),
+            battery_power=battery_power,
+            grid_power=self._power_state(str(options[CONF_GRID_POWER])),
+            voltage=voltage,
+            phase_count=phase_count,
+            priority=priority,
+            max_current=max_current,
+            safety_margin=float(
+                options.get(CONF_PV_SAFETY_MARGIN, DEFAULT_PV_SAFETY_MARGIN)
+            ),
+            battery_full=self._battery_full,
+        )
+        now = monotonic()
+        available = self._sample_median(
+            self._ev_power_samples,
+            raw.available_pv_power or 0,
+            EV_POWER_MEDIAN_WINDOW.total_seconds(),
+            now,
+        )
+        smoothed = calculate_ev_pv_decision(
+            ev_power=0,
+            battery_power=available,
+            grid_power=0,
+            voltage=voltage,
+            phase_count=phase_count,
+            priority=priority,
+            max_current=max_current,
+            safety_margin=0,
+            battery_full=self._battery_full,
+        )
+        target = smoothed.target_current or 0
+        target_median = self._sample_median(
+            self._ev_current_samples,
+            target,
+            EV_CURRENT_MEDIAN_WINDOW.total_seconds(),
+            now,
+        )
+        measured_current = self._current_state(
+            str(options.get(CONF_EV_CURRENT_FEEDBACK) or options[CONF_EV_CURRENT_LIMIT])
+        )
+        requested, control_mode, reason = self._ev_requested_current(
+            current=(
+                measured_current
+                if previous_strategy == EV_STRATEGY_PV
+                else EV_PAUSE_CURRENT
+            ),
+            target=target,
+            target_median=target_median,
+            max_current=max_current,
+            now=now,
+        )
+        self.ev_decision = replace(
+            smoothed,
+            mode=control_mode,
+            reason=reason,
+            requested_current=requested,
+        )
 
     def _ev_requested_current(
         self,
@@ -521,10 +633,12 @@ class GridPilotController:
             if self._ev_requires_pause:
                 try:
                     await self._async_write_ev_current(EV_PAUSE_CURRENT, force=True)
+                    self._last_ev_strategy = EV_STRATEGY_NONE
                 except (HomeAssistantError, KeyError, TypeError, ValueError) as err:
                     self.last_ev_actuation_error = str(err)
             else:
                 self.last_ev_actuation_error = None
+                self._last_ev_strategy = self.ev_decision.strategy
             return
 
         if requested is None:
@@ -532,12 +646,19 @@ class GridPilotController:
                 requested = EV_PAUSE_CURRENT
             else:
                 self.last_ev_actuation_error = None
+                self._last_ev_strategy = self.ev_decision.strategy
                 return
 
         try:
             await self._async_write_ev_current(
-                requested, force=not self.ev_decision.valid
+                requested,
+                force=(
+                    not self.ev_decision.valid
+                    or self.ev_decision.strategy != self._last_ev_strategy
+                    or requested <= EV_PAUSE_CURRENT
+                ),
             )
+            self._last_ev_strategy = self.ev_decision.strategy
         except (HomeAssistantError, KeyError, TypeError, ValueError) as err:
             self.last_ev_actuation_error = str(err)
             _LOGGER.error("Unable to apply GridPilot EV current: %s", err)
@@ -648,6 +769,7 @@ class GridPilotController:
         self._ev_power_samples.clear()
         self._ev_current_samples.clear()
         self._ev_stop_started = None
+        self._ev_restart_until = None
 
     async def async_shutdown(self) -> bool:
         """Return active battery and EV actuators to neutral setpoints."""
@@ -702,6 +824,43 @@ class GridPilotController:
         if not math.isfinite(value):
             raise ValueError(f"Current entity is not numeric: {entity_id}")
         return value
+
+    def _duration_state(self, entity_id: str) -> float:
+        """Return one finite duration measured in seconds."""
+        state = self.hass.states.get(entity_id)
+        if state is None or state.state in {"unknown", "unavailable"}:
+            raise ValueError(f"Duration entity is unavailable: {entity_id}")
+        if state.attributes.get("unit_of_measurement") != "s":
+            raise ValueError(f"Duration entity is not measured in s: {entity_id}")
+        value = float(state.state)
+        if not math.isfinite(value):
+            raise ValueError(f"Duration entity is not numeric: {entity_id}")
+        return value
+
+    def _seconds_until_target(self, entity_id: str) -> float:
+        """Return time until the configured deadline, rolling its time forward daily."""
+        state = self.hass.states.get(entity_id)
+        if state is None or state.state in {"unknown", "unavailable"}:
+            raise ValueError(f"Target time is unavailable: {entity_id}")
+        now = dt_util.now()
+        if not state.attributes.get("has_date", True):
+            try:
+                target = now.replace(
+                    hour=int(state.attributes["hour"]),
+                    minute=int(state.attributes["minute"]),
+                    second=int(state.attributes["second"]),
+                    microsecond=0,
+                )
+            except (KeyError, TypeError, ValueError) as err:
+                raise ValueError(f"Target time is invalid: {entity_id}") from err
+        else:
+            timestamp = float(state.attributes.get("timestamp", math.nan))
+            if not math.isfinite(timestamp):
+                raise ValueError(f"Target time has no timestamp: {entity_id}")
+            target = dt_util.as_local(dt_util.utc_from_timestamp(timestamp))
+        while target <= now:
+            target += timedelta(days=1)
+        return (dt_util.as_utc(target) - dt_util.as_utc(now)).total_seconds()
 
     def _power_state(self, entity_id: str) -> float:
         state = self.hass.states.get(entity_id)
@@ -784,6 +943,7 @@ class GridPilotController:
             },
             "ev_decision": {
                 "valid": self.ev_decision.valid,
+                "strategy": self.ev_decision.strategy,
                 "mode": self.ev_decision.mode,
                 "reason": self.ev_decision.reason,
                 "battery_full": self.ev_decision.battery_full,

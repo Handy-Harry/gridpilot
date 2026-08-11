@@ -1,9 +1,14 @@
 """Tests for optional GridPilot battery actuation."""
 
+from datetime import datetime
+from time import time
+from zoneinfo import ZoneInfo
+
 from homeassistant.const import ATTR_ENTITY_ID, UnitOfElectricCurrent, UnitOfPower
 from homeassistant.core import HomeAssistant, ServiceCall
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.gridpilot import controller as controller_module
 from custom_components.gridpilot.const import (
     CONF_BATTERY_CHARGE_POSITIVE,
     CONF_BATTERY_POWER,
@@ -11,12 +16,19 @@ from custom_components.gridpilot.const import (
     CONF_CHARGE_SOC,
     CONF_ENABLE_ACTUATION,
     CONF_ENABLE_EV_ACTUATION,
+    CONF_EV_BATTERY_MIN_SOC,
+    CONF_EV_BATTERY_SOC,
+    CONF_EV_BATTERY_TARGET_TIME,
+    CONF_EV_BATTERY_TIME_TO_GO,
     CONF_EV_CONNECTION_STATE,
     CONF_EV_CURRENT_FEEDBACK,
     CONF_EV_CURRENT_LIMIT,
+    CONF_EV_MANUAL_CURRENT,
     CONF_EV_MODE,
+    CONF_EV_OVERRIDE,
     CONF_EV_PHASE_MODE,
     CONF_EV_POWER,
+    CONF_EV_PV_MODE,
     CONF_EV_VOLTAGE,
     CONF_GRID_POWER,
     CONF_GRID_SETPOINT,
@@ -36,6 +48,9 @@ def _entry(
     partial_ev: bool = False,
     battery_charge_positive: bool = True,
     current_feedback: bool = False,
+    configure_manual: bool = False,
+    configure_battery_to_ev: bool = False,
+    pv_mode: str | None = None,
 ) -> MockConfigEntry:
     options = {
         CONF_MAX_GRID_POWER: 2900,
@@ -50,7 +65,12 @@ def _entry(
                 CONF_EV_CURRENT_LIMIT: "number.ev_current",
             }
         )
-    elif configure_ev or enable_ev_actuation:
+    elif (
+        configure_ev
+        or enable_ev_actuation
+        or configure_manual
+        or configure_battery_to_ev
+    ):
         options.update(
             {
                 CONF_BATTERY_CHARGE_POSITIVE: battery_charge_positive,
@@ -66,6 +86,20 @@ def _entry(
         )
         if current_feedback:
             options[CONF_EV_CURRENT_FEEDBACK] = "sensor.ev_current_feedback"
+        if configure_manual:
+            options[CONF_EV_MANUAL_CURRENT] = "input_number.manual_current"
+        if configure_battery_to_ev:
+            options.update(
+                {
+                    CONF_EV_OVERRIDE: "input_boolean.battery_to_ev",
+                    CONF_EV_BATTERY_SOC: "sensor.secondary_battery_soc",
+                    CONF_EV_BATTERY_MIN_SOC: "input_number.minimum_battery_soc",
+                    CONF_EV_BATTERY_TIME_TO_GO: "sensor.battery_time_to_go",
+                    CONF_EV_BATTERY_TARGET_TIME: "input_datetime.battery_target",
+                }
+            )
+        if pv_mode is not None:
+            options[CONF_EV_PV_MODE] = pv_mode
     return MockConfigEntry(
         domain=DOMAIN,
         data={
@@ -113,6 +147,38 @@ def _set_ev_states(hass: HomeAssistant, *, mode: str = "PV laden") -> None:
             "max": 32,
             "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
         },
+    )
+
+
+def _set_manual_ev_state(hass: HomeAssistant, current: float = 10) -> None:
+    hass.states.async_set(
+        "input_number.manual_current",
+        str(current),
+        {"unit_of_measurement": UnitOfElectricCurrent.AMPERE},
+    )
+
+
+def _set_battery_to_ev_states(
+    hass: HomeAssistant,
+    *,
+    enabled: bool = True,
+    primary_soc: float = 70,
+    secondary_soc: float = 70,
+    minimum_soc: float = 30,
+) -> None:
+    hass.states.async_set("sensor.battery_soc", str(primary_soc))
+    hass.states.async_set("input_boolean.battery_to_ev", "on" if enabled else "off")
+    hass.states.async_set("sensor.secondary_battery_soc", str(secondary_soc))
+    hass.states.async_set("input_number.minimum_battery_soc", str(minimum_soc))
+    hass.states.async_set(
+        "sensor.battery_time_to_go",
+        "75600",
+        {"unit_of_measurement": "s"},
+    )
+    hass.states.async_set(
+        "input_datetime.battery_target",
+        "2026-08-12 08:00:00",
+        {"timestamp": time() + 43_200},
     )
 
 
@@ -239,17 +305,296 @@ async def test_ev_shadow_mode_calculates_without_writing(hass: HomeAssistant) ->
     assert calls == []
 
 
-async def test_ev_actuation_writes_only_in_pv_mode(hass: HomeAssistant) -> None:
+async def test_manual_ev_actuation_writes_configured_current(
+    hass: HomeAssistant,
+) -> None:
     _set_valid_states(hass)
     _set_ev_states(hass, mode="Manueel")
+    _set_manual_ev_state(hass, 10)
+    calls: list[ServiceCall] = []
+    hass.services.async_register("number", "set_value", calls.append)
+
+    controller = GridPilotController(
+        hass,
+        _entry(
+            False,
+            enable_ev_actuation=True,
+            configure_manual=True,
+        ),
+    )
+    await controller.async_refresh()
+
+    assert controller.ev_decision.strategy == "manual"
+    assert controller.ev_decision.requested_current == 10
+    assert calls[0].data == {
+        ATTR_ENTITY_ID: "number.ev_current",
+        "value": 10,
+    }
+
+
+async def test_inactive_ev_mode_does_not_write(hass: HomeAssistant) -> None:
+    _set_valid_states(hass)
+    _set_ev_states(hass, mode="Uit")
     calls: list[ServiceCall] = []
     hass.services.async_register("number", "set_value", calls.append)
 
     controller = GridPilotController(hass, _entry(False, enable_ev_actuation=True))
     await controller.async_refresh()
 
+    assert controller.ev_decision.strategy == "none"
     assert controller.ev_decision.requested_current is None
     assert calls == []
+
+
+async def test_legacy_pv_mode_named_manual_keeps_pv_semantics(
+    hass: HomeAssistant,
+) -> None:
+    _set_valid_states(hass)
+    _set_ev_states(hass, mode="Manueel")
+    controller = GridPilotController(
+        hass,
+        _entry(False, configure_ev=True, pv_mode="Manueel"),
+    )
+
+    await controller.async_refresh()
+
+    assert controller.ev_decision.valid
+    assert controller.ev_decision.strategy == "pv"
+
+
+async def test_strategy_change_bypasses_normal_ev_rate_limit(
+    hass: HomeAssistant,
+) -> None:
+    _set_valid_states(hass)
+    _set_ev_states(hass)
+    _set_manual_ev_state(hass, 10)
+    calls: list[ServiceCall] = []
+    hass.services.async_register("number", "set_value", calls.append)
+    controller = GridPilotController(
+        hass,
+        _entry(
+            False,
+            enable_ev_actuation=True,
+            configure_manual=True,
+        ),
+    )
+
+    await controller.async_refresh()
+    hass.states.async_set(
+        "number.ev_current",
+        "6",
+        {
+            "min": 0,
+            "max": 32,
+            "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
+        },
+    )
+    hass.states.async_set("input_select.ev_mode", "Manueel")
+    await controller.async_refresh()
+
+    assert [call.data["value"] for call in calls] == [6, 10]
+
+
+async def test_battery_to_ev_toggle_has_strategy_priority(
+    hass: HomeAssistant,
+) -> None:
+    _set_valid_states(hass)
+    _set_ev_states(hass, mode="PV laden")
+    _set_battery_to_ev_states(hass)
+    controller = GridPilotController(
+        hass,
+        _entry(False, configure_battery_to_ev=True),
+    )
+
+    await controller.async_refresh()
+
+    assert controller.ev_decision.valid
+    assert controller.ev_decision.strategy == "battery_to_ev"
+    assert controller.ev_decision.requested_current == 6
+
+
+async def test_battery_to_ev_reserve_soc_forces_safe_pause(
+    hass: HomeAssistant,
+) -> None:
+    _set_valid_states(hass)
+    _set_ev_states(hass, mode="Manueel")
+    _set_battery_to_ev_states(hass, secondary_soc=30)
+    hass.states.async_set(
+        "number.ev_current",
+        "8",
+        {
+            "min": 0,
+            "max": 32,
+            "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
+        },
+    )
+    calls: list[ServiceCall] = []
+    hass.services.async_register("number", "set_value", calls.append)
+    controller = GridPilotController(
+        hass,
+        _entry(
+            False,
+            enable_ev_actuation=True,
+            configure_battery_to_ev=True,
+        ),
+    )
+
+    await controller.async_refresh()
+
+    assert controller.ev_decision.requested_current == 5
+    assert calls[0].data["value"] == 5
+
+
+async def test_battery_to_ev_handoff_starts_at_six_amps(
+    hass: HomeAssistant,
+) -> None:
+    _set_valid_states(hass)
+    _set_ev_states(hass, mode="Manueel")
+    _set_manual_ev_state(hass, 16)
+    _set_battery_to_ev_states(hass, enabled=False)
+    hass.states.async_set(
+        "number.ev_current",
+        "16",
+        {
+            "min": 0,
+            "max": 32,
+            "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
+        },
+    )
+    controller = GridPilotController(
+        hass,
+        _entry(
+            False,
+            configure_manual=True,
+            configure_battery_to_ev=True,
+        ),
+    )
+
+    await controller.async_refresh()
+    hass.states.async_set("input_boolean.battery_to_ev", "on")
+    await controller.async_refresh()
+
+    assert controller.ev_decision.strategy == "battery_to_ev"
+    assert controller.ev_decision.requested_current == 6
+
+
+async def test_battery_to_ev_handoff_to_pv_does_not_use_stop_delay(
+    hass: HomeAssistant,
+) -> None:
+    _set_valid_states(hass)
+    _set_ev_states(hass)
+    _set_battery_to_ev_states(hass)
+    controller = GridPilotController(
+        hass,
+        _entry(False, configure_battery_to_ev=True),
+    )
+
+    await controller.async_refresh()
+    hass.states.async_set("input_boolean.battery_to_ev", "off")
+    hass.states.async_set(
+        "sensor.battery_power", "0", {"unit_of_measurement": UnitOfPower.WATT}
+    )
+    hass.states.async_set(
+        "number.ev_current",
+        "6",
+        {
+            "min": 0,
+            "max": 32,
+            "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
+        },
+    )
+    await controller.async_refresh()
+
+    assert controller.ev_decision.strategy == "pv"
+    assert controller.ev_decision.mode == "waiting"
+    assert controller.ev_decision.requested_current == 5
+
+
+async def test_battery_reserve_pause_bypasses_ev_rate_limit(
+    hass: HomeAssistant,
+) -> None:
+    _set_valid_states(hass)
+    _set_ev_states(hass)
+    _set_battery_to_ev_states(hass)
+    calls: list[ServiceCall] = []
+    hass.services.async_register("number", "set_value", calls.append)
+    controller = GridPilotController(
+        hass,
+        _entry(
+            False,
+            enable_ev_actuation=True,
+            configure_battery_to_ev=True,
+        ),
+    )
+
+    await controller.async_refresh()
+    hass.states.async_set(
+        "number.ev_current",
+        "6",
+        {
+            "min": 0,
+            "max": 32,
+            "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
+        },
+    )
+    hass.states.async_set("sensor.secondary_battery_soc", "30")
+    await controller.async_refresh()
+
+    assert [call.data["value"] for call in calls] == [6, 5]
+
+
+async def test_disconnect_pause_bypasses_ev_rate_limit(
+    hass: HomeAssistant,
+) -> None:
+    _set_valid_states(hass)
+    _set_ev_states(hass)
+    calls: list[ServiceCall] = []
+    hass.services.async_register("number", "set_value", calls.append)
+    controller = GridPilotController(
+        hass,
+        _entry(False, enable_ev_actuation=True),
+    )
+
+    await controller.async_refresh()
+    hass.states.async_set(
+        "number.ev_current",
+        "6",
+        {
+            "min": 0,
+            "max": 32,
+            "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
+        },
+    )
+    hass.states.async_set("sensor.ev_connection", "Available")
+    await controller.async_refresh()
+
+    assert [call.data["value"] for call in calls] == [6, 5]
+
+
+def test_time_only_deadline_uses_local_time_and_dst(
+    hass: HomeAssistant, monkeypatch
+) -> None:
+    zone = ZoneInfo("Europe/Brussels")
+    monkeypatch.setattr(
+        controller_module.dt_util,
+        "now",
+        lambda: datetime(2026, 3, 28, 9, 0, tzinfo=zone),
+    )
+    hass.states.async_set(
+        "input_datetime.battery_target",
+        "08:00:00",
+        {
+            "has_date": False,
+            "has_time": True,
+            "hour": 8,
+            "minute": 0,
+            "second": 0,
+            "timestamp": 28_800,
+        },
+    )
+    controller = GridPilotController(hass, _entry(False))
+
+    assert controller._seconds_until_target("input_datetime.battery_target") == 79_200
 
 
 async def test_ev_actuation_starts_at_six_amps(hass: HomeAssistant) -> None:
@@ -377,6 +722,7 @@ async def test_ev_current_feedback_drives_ramping(hass: HomeAssistant) -> None:
     )
 
     await controller.async_refresh()
+    await controller.async_refresh()
 
     assert controller.ev_decision.valid
     assert controller.ev_decision.requested_current == 8
@@ -397,6 +743,7 @@ async def test_ev_readback_above_configured_maximum_is_clamped(
         _entry(False, configure_ev=True, current_feedback=True),
     )
 
+    await controller.async_refresh()
     await controller.async_refresh()
 
     assert controller.ev_decision.valid

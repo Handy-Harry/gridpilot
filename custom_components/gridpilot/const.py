@@ -5,7 +5,7 @@ from typing import Final
 
 DOMAIN: Final = "gridpilot"
 NAME: Final = "GridPilot"
-VERSION: Final = "0.3.0"
+VERSION: Final = "0.4.0"
 
 PLATFORMS: Final = ["sensor", "binary_sensor"]
 UPDATE_INTERVAL: Final = timedelta(minutes=1)
@@ -40,6 +40,12 @@ CONF_EV_VOLTAGE: Final = "ev_voltage"
 CONF_EV_PHASE_MODE: Final = "ev_phase_mode"
 CONF_EV_MODE: Final = "ev_mode"
 CONF_EV_OVERRIDE: Final = "ev_override"
+CONF_EV_MANUAL_MODE: Final = "ev_manual_mode"
+CONF_EV_MANUAL_CURRENT: Final = "ev_manual_current"
+CONF_EV_BATTERY_SOC: Final = "ev_battery_soc"
+CONF_EV_BATTERY_MIN_SOC: Final = "ev_battery_min_soc"
+CONF_EV_BATTERY_TIME_TO_GO: Final = "ev_battery_time_to_go"
+CONF_EV_BATTERY_TARGET_TIME: Final = "ev_battery_target_time"
 CONF_BATTERY_CHARGE_POSITIVE: Final = "battery_charge_positive"
 CONF_EV_PV_MODE: Final = "ev_pv_mode"
 CONF_EV_DISCONNECTED_STATE: Final = "ev_disconnected_state"
@@ -56,6 +62,7 @@ DEFAULT_ENABLE_ACTUATION: Final = False
 DEFAULT_ENABLE_EV_ACTUATION: Final = False
 DEFAULT_BATTERY_CHARGE_POSITIVE: Final = True
 DEFAULT_EV_PV_MODE: Final = "PV laden"
+DEFAULT_EV_MANUAL_MODE: Final = "Manueel"
 DEFAULT_EV_DISCONNECTED_STATE: Final = "Available"
 DEFAULT_EV_PRIORITY: Final = 50.0
 DEFAULT_EV_MAX_CURRENT: Final = 16.0
@@ -69,6 +76,19 @@ EV_CURRENT_STEP: Final = 0.5
 EV_CURRENT_DEADBAND: Final = 0.75
 BATTERY_FULL_SOC: Final = 98.0
 BATTERY_FULL_RELEASE_SOC: Final = 97.0
+EV_BATTERY_GRID_IMPORT_LIMIT: Final = 150.0
+EV_BATTERY_MIN_TOLERANCE: Final = 600.0
+
+EV_STRATEGY_NONE: Final = "none"
+EV_STRATEGY_PV: Final = "pv"
+EV_STRATEGY_MANUAL: Final = "manual"
+EV_STRATEGY_BATTERY_TO_EV: Final = "battery_to_ev"
+EV_STRATEGIES: Final = [
+    EV_STRATEGY_NONE,
+    EV_STRATEGY_PV,
+    EV_STRATEGY_MANUAL,
+    EV_STRATEGY_BATTERY_TO_EV,
+]
 
 PROFILE_GENERIC: Final = "generic"
 PROFILE_VICTRON: Final = "victron"

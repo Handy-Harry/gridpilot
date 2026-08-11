@@ -23,6 +23,7 @@ class EVControlDecision:
     valid: bool
     mode: str
     reason: str
+    strategy: str = "none"
     battery_full: bool = False
     available_pv_power: float | None = None
     allocated_ev_power: float | None = None

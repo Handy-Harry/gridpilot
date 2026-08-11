@@ -9,7 +9,7 @@ from homeassistant.const import EntityCategory, UnitOfElectricCurrent, UnitOfPow
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import EV_MODES, MODES
+from .const import EV_MODES, EV_STRATEGIES, MODES
 from .entity import GridPilotEntity
 from .runtime import GridPilotConfigEntry
 
@@ -112,6 +112,22 @@ class EVOperatingModeSensor(GridPilotEntity, SensorEntity):
         return self.controller.ev_decision.mode
 
 
+class EVStrategySensor(GridPilotEntity, SensorEntity):
+    """Selected GridPilot EV charging strategy."""
+
+    _attr_translation_key = "ev_strategy"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = EV_STRATEGIES
+
+    def __init__(self, entry: GridPilotConfigEntry) -> None:
+        super().__init__(entry)
+        self._attr_unique_id = f"{entry.entry_id}_ev_strategy"
+
+    @property
+    def native_value(self) -> str:
+        return self.controller.ev_decision.strategy
+
+
 class EVControlReasonSensor(GridPilotEntity, SensorEntity):
     """Human-readable reason for the EV decision."""
 
@@ -141,6 +157,7 @@ async def async_setup_entry(
             AvailablePVPowerSensor(entry),
             EVTargetCurrentSensor(entry),
             EVOperatingModeSensor(entry),
+            EVStrategySensor(entry),
             EVControlReasonSensor(entry),
         ]
     )

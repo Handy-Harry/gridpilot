@@ -4,7 +4,9 @@ import pytest
 
 from custom_components.gridpilot.ev_calculations import (
     calculate_available_pv_power,
+    calculate_battery_to_ev_decision,
     calculate_ev_pv_decision,
+    calculate_manual_ev_decision,
     update_battery_full_hysteresis,
 )
 
@@ -78,3 +80,57 @@ def test_full_battery_assigns_all_available_power_to_ev() -> None:
 
     assert decision.allocated_ev_power == 2300
     assert decision.target_current == 10
+
+
+def test_manual_ev_current_follows_selected_setting() -> None:
+    decision = calculate_manual_ev_decision(requested_current=10.5, max_current=16)
+
+    assert decision.strategy == "manual"
+    assert decision.requested_current == 10.5
+
+
+def test_manual_ev_current_rejects_values_below_charging_minimum() -> None:
+    with pytest.raises(ValueError, match="between 6 and 16 A"):
+        calculate_manual_ev_decision(requested_current=5, max_current=16)
+
+
+def test_battery_to_ev_pauses_at_either_reserve_soc() -> None:
+    decision = calculate_battery_to_ev_decision(
+        current=8,
+        battery_soc=30,
+        secondary_soc=70,
+        minimum_soc=30,
+        time_to_go=60_000,
+        seconds_until_target=36_000,
+        grid_power=0,
+        max_current=16,
+    )
+
+    assert decision.strategy == "battery_to_ev"
+    assert decision.requested_current == 5
+
+
+@pytest.mark.parametrize(
+    ("grid_power", "time_to_go", "expected"),
+    [
+        (200, 75_600, 7.5),
+        (0, 100_000, 8.5),
+        (0, 50_000, 7.5),
+        (0, 75_600, 8),
+    ],
+)
+def test_battery_to_ev_adjusts_in_half_amp_steps(
+    grid_power: float, time_to_go: float, expected: float
+) -> None:
+    decision = calculate_battery_to_ev_decision(
+        current=8,
+        battery_soc=70,
+        secondary_soc=70,
+        minimum_soc=30,
+        time_to_go=time_to_go,
+        seconds_until_target=43_200,
+        grid_power=grid_power,
+        max_current=16,
+    )
+
+    assert decision.requested_current == expected

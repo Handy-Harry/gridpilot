@@ -17,10 +17,16 @@ from .const import (
     CONF_CHARGE_SOC,
     CONF_ENABLE_ACTUATION,
     CONF_ENABLE_EV_ACTUATION,
+    CONF_EV_BATTERY_MIN_SOC,
+    CONF_EV_BATTERY_SOC,
+    CONF_EV_BATTERY_TARGET_TIME,
+    CONF_EV_BATTERY_TIME_TO_GO,
     CONF_EV_CONNECTION_STATE,
     CONF_EV_CURRENT_FEEDBACK,
     CONF_EV_CURRENT_LIMIT,
     CONF_EV_DISCONNECTED_STATE,
+    CONF_EV_MANUAL_CURRENT,
+    CONF_EV_MANUAL_MODE,
     CONF_EV_MAX_CURRENT,
     CONF_EV_MODE,
     CONF_EV_OVERRIDE,
@@ -44,6 +50,7 @@ from .const import (
     DEFAULT_ENABLE_ACTUATION,
     DEFAULT_ENABLE_EV_ACTUATION,
     DEFAULT_EV_DISCONNECTED_STATE,
+    DEFAULT_EV_MANUAL_MODE,
     DEFAULT_EV_MAX_CURRENT,
     DEFAULT_EV_PRIORITY,
     DEFAULT_EV_PV_MODE,
@@ -67,7 +74,7 @@ def _entity_selector(domains: list[str]) -> selector.EntitySelector:
 class GridPilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle the GridPilot setup flow."""
 
-    VERSION = 4
+    VERSION = 5
     MINOR_VERSION = 0
 
     def __init__(self) -> None:
@@ -180,13 +187,17 @@ class GridPilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Collect optional PV-surplus and EV control mappings."""
+        errors: dict[str, str] = {}
         if user_input is not None:
-            self._options.update(user_input)
-            return await self.async_step_control()
+            errors = _ev_options_errors(user_input)
+            if not errors:
+                self._options.update(user_input)
+                return await self.async_step_control()
 
         return self.async_show_form(
             step_id="ev",
-            data_schema=_ev_options_schema({}),
+            data_schema=_ev_options_schema(user_input or {}),
+            errors=errors,
         )
 
     async def async_step_control(
@@ -236,13 +247,17 @@ class GridPilotOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Edit PV-surplus and EV-current options."""
+        errors: dict[str, str] = {}
         if user_input is not None:
-            self._options.update(user_input)
-            return self.async_create_entry(title="", data=self._options)
+            errors = _ev_options_errors(user_input)
+            if not errors:
+                self._options.update(user_input)
+                return self.async_create_entry(title="", data=self._options)
 
         return self.async_show_form(
             step_id="ev",
-            data_schema=_ev_options_schema(self.config_entry.options),
+            data_schema=_ev_options_schema(user_input or self.config_entry.options),
+            errors=errors,
         )
 
 
@@ -315,6 +330,11 @@ def _ev_options_schema(current: dict[str, Any]) -> vol.Schema:
             optional_entity(CONF_EV_PHASE_MODE, ["select", "sensor"]),
             optional_entity(CONF_EV_MODE, ["input_select", "select"]),
             optional_entity(CONF_EV_OVERRIDE, ["input_boolean", "binary_sensor"]),
+            optional_entity(CONF_EV_MANUAL_CURRENT, ["input_number", "number"]),
+            optional_entity(CONF_EV_BATTERY_SOC, ["sensor"]),
+            optional_entity(CONF_EV_BATTERY_MIN_SOC, ["input_number", "number"]),
+            optional_entity(CONF_EV_BATTERY_TIME_TO_GO, ["sensor"]),
+            optional_entity(CONF_EV_BATTERY_TARGET_TIME, ["input_datetime"]),
         ]
     )
     fields.update(
@@ -329,6 +349,10 @@ def _ev_options_schema(current: dict[str, Any]) -> vol.Schema:
             vol.Required(
                 CONF_EV_PV_MODE,
                 default=current.get(CONF_EV_PV_MODE, DEFAULT_EV_PV_MODE),
+            ): selector.TextSelector(),
+            vol.Required(
+                CONF_EV_MANUAL_MODE,
+                default=current.get(CONF_EV_MANUAL_MODE, DEFAULT_EV_MANUAL_MODE),
             ): selector.TextSelector(),
             vol.Required(
                 CONF_EV_DISCONNECTED_STATE,
@@ -369,3 +393,10 @@ def _ev_options_schema(current: dict[str, Any]) -> vol.Schema:
         }
     )
     return vol.Schema(fields)
+
+
+def _ev_options_errors(options: dict[str, Any]) -> dict[str, str]:
+    """Validate relationships between EV options."""
+    if options.get(CONF_EV_PV_MODE) == options.get(CONF_EV_MANUAL_MODE):
+        return {CONF_EV_MANUAL_MODE: "mode_values_must_differ"}
+    return {}

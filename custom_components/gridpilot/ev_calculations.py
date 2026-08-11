@@ -7,9 +7,16 @@ import math
 from .const import (
     BATTERY_FULL_RELEASE_SOC,
     BATTERY_FULL_SOC,
+    EV_BATTERY_GRID_IMPORT_LIMIT,
+    EV_BATTERY_MIN_TOLERANCE,
+    EV_CURRENT_STEP,
     EV_MIN_CURRENT,
     EV_MODE_CHARGING,
     EV_MODE_WAITING,
+    EV_PAUSE_CURRENT,
+    EV_STRATEGY_BATTERY_TO_EV,
+    EV_STRATEGY_MANUAL,
+    EV_STRATEGY_PV,
 )
 from .models import EVControlDecision
 
@@ -80,9 +87,103 @@ def calculate_ev_pv_decision(
             if charging
             else "Available PV power is below the minimum charging current"
         ),
+        strategy=EV_STRATEGY_PV,
         battery_full=battery_full,
         available_pv_power=round(available, 1),
         allocated_ev_power=round(allocated, 1),
         target_current=round(target, 2),
         phase_count=phase_count,
+    )
+
+
+def calculate_manual_ev_decision(
+    *, requested_current: float, max_current: float
+) -> EVControlDecision:
+    """Validate and return the current selected for manual charging."""
+    if not math.isfinite(requested_current):
+        raise ValueError("Manual EV current must be finite")
+    if not math.isfinite(max_current) or max_current < EV_MIN_CURRENT:
+        raise ValueError("EV maximum current must be at least 6 A")
+    if requested_current < EV_MIN_CURRENT or requested_current > max_current:
+        raise ValueError(f"Manual EV current must be between 6 and {max_current:g} A")
+    return EVControlDecision(
+        valid=True,
+        mode=EV_MODE_CHARGING,
+        reason="EV current follows the manual charging setting",
+        strategy=EV_STRATEGY_MANUAL,
+        target_current=round(requested_current, 2),
+        requested_current=round(requested_current, 2),
+    )
+
+
+def calculate_battery_to_ev_decision(
+    *,
+    current: float,
+    battery_soc: float,
+    secondary_soc: float,
+    minimum_soc: float,
+    time_to_go: float,
+    seconds_until_target: float,
+    grid_power: float,
+    max_current: float,
+) -> EVControlDecision:
+    """Calculate EV current that reaches the battery reserve near the deadline."""
+    values = (
+        current,
+        battery_soc,
+        secondary_soc,
+        minimum_soc,
+        time_to_go,
+        seconds_until_target,
+        grid_power,
+        max_current,
+    )
+    if not all(math.isfinite(value) for value in values):
+        raise ValueError("Battery-to-EV inputs must be finite")
+    if not all(0 <= soc <= 100 for soc in (battery_soc, secondary_soc)):
+        raise ValueError("Battery SOC must be between 0 and 100 percent")
+    if not 0 <= minimum_soc < 100:
+        raise ValueError("Battery-to-EV minimum SOC must be below 100 percent")
+    if max_current < EV_MIN_CURRENT:
+        raise ValueError("EV maximum current must be at least 6 A")
+    if battery_soc <= minimum_soc or secondary_soc <= minimum_soc:
+        return EVControlDecision(
+            valid=True,
+            mode=EV_MODE_WAITING,
+            reason="Battery reserve SOC pauses battery-to-EV charging",
+            strategy=EV_STRATEGY_BATTERY_TO_EV,
+            target_current=EV_PAUSE_CURRENT,
+            requested_current=EV_PAUSE_CURRENT,
+        )
+    if time_to_go <= 0 or seconds_until_target <= 0:
+        raise ValueError("Battery-to-EV timing inputs must be positive")
+
+    desired_time_to_go = (
+        seconds_until_target * secondary_soc / (secondary_soc - minimum_soc)
+    )
+    tolerance = max(EV_BATTERY_MIN_TOLERANCE, desired_time_to_go * 0.05)
+    if current < EV_MIN_CURRENT:
+        requested = EV_MIN_CURRENT
+        reason = "Battery-to-EV charging started"
+    elif grid_power > EV_BATTERY_GRID_IMPORT_LIMIT and current > EV_MIN_CURRENT:
+        requested = current - EV_CURRENT_STEP
+        reason = "Grid import reduces battery-to-EV current"
+    elif time_to_go > desired_time_to_go + tolerance:
+        requested = current + EV_CURRENT_STEP
+        reason = "Battery reserve allows more EV current"
+    elif time_to_go < desired_time_to_go - tolerance and current > EV_MIN_CURRENT:
+        requested = current - EV_CURRENT_STEP
+        reason = "Battery reserve requires less EV current"
+    else:
+        requested = current
+        reason = "Battery-to-EV current is within the target tolerance"
+
+    requested = min(max_current, max(EV_MIN_CURRENT, requested))
+    return EVControlDecision(
+        valid=True,
+        mode=EV_MODE_CHARGING,
+        reason=reason,
+        strategy=EV_STRATEGY_BATTERY_TO_EV,
+        target_current=round(requested, 2),
+        requested_current=round(requested, 2),
     )
