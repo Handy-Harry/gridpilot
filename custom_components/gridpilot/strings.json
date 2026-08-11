@@ -47,25 +47,20 @@
         "description": "These values are stored inside GridPilot's Home Assistant config entry. No helpers are created.",
         "data": {
           "max_grid_power": "Maximum grid import",
-          "minimum_soc": "SOC for maximum charging",
           "charge_soc": "SOC for full home-load compensation",
-          "normal_soc": "SOC for normal battery operation",
           "minimum_charge_power": "Minimum charging power",
           "enable_actuation": "Enable active battery control"
         },
         "data_description": {
           "max_grid_power": "Positive maximum permitted grid import in watts. This fixed value replaces the need for a separate helper. Default: 2900 W.",
-          "minimum_soc": "At or below this SOC, GridPilot requests the maximum permitted grid import. Default: 10%.",
-          "charge_soc": "At this SOC, the calculated setpoint equals the current home load. Below it, extra battery charging power is added. Default: 15%.",
-          "normal_soc": "At or above this SOC, the calculated setpoint is 0 W. Between the charge and normal thresholds, grid compensation tapers to zero. Default: 20%.",
+          "charge_soc": "At this SOC, the calculated setpoint equals the current home load. Maximum charging starts 5 percentage points below it and normal battery operation starts 5 percentage points above it. Default: 15%.",
           "minimum_charge_power": "Minimum extra charging power requested below the charge threshold, before applying the maximum grid-power limit. Default: 300 W.",
           "enable_actuation": "Danger: enable only after every other controller writing to the grid setpoint has been disabled. Invalid measurements and unloads reset the setpoint to 0 W. Default: off."
         }
       }
     },
     "error": {
-      "load_entities_required": "Select one total load sensor or all three phase sensors",
-      "invalid_soc_order": "SOC thresholds must be ordered minimum < charge < normal"
+      "load_entities_required": "Select one total load sensor or all three phase sensors"
     },
     "abort": {
       "already_configured": "GridPilot is already configured"
@@ -75,27 +70,20 @@
     "step": {
       "init": {
         "title": "Configure the battery curve",
-        "description": "GridPilot calculates a grid setpoint from these ordered SOC thresholds. Active control is optional and must not run alongside another setpoint controller.",
+        "description": "GridPilot derives the maximum-charging and normal-operation thresholds 5 percentage points below and above the configured compensation SOC. Active control must not run alongside another setpoint controller.",
         "data": {
           "max_grid_power": "Maximum grid import",
-          "minimum_soc": "SOC for maximum charging",
           "charge_soc": "SOC for full home-load compensation",
-          "normal_soc": "SOC for normal battery operation",
           "minimum_charge_power": "Minimum charging power",
           "enable_actuation": "Enable active battery control"
         },
         "data_description": {
           "max_grid_power": "Positive maximum permitted grid import in watts, stored inside GridPilot. Default: 2900 W.",
-          "minimum_soc": "At or below this SOC, GridPilot requests the maximum permitted grid import. Default: 10%.",
-          "charge_soc": "At this SOC, the calculated setpoint equals the current home load. Below it, extra battery charging power is added. Default: 15%.",
-          "normal_soc": "At or above this SOC, the calculated setpoint is 0 W. Between the charge and normal thresholds, grid compensation tapers to zero. Default: 20%.",
+          "charge_soc": "At this SOC, the calculated setpoint equals the current home load. Maximum charging starts 5 percentage points below it and normal battery operation starts 5 percentage points above it. Default: 15%.",
           "minimum_charge_power": "Minimum extra charging power requested below the charge threshold, before applying the maximum grid-power limit. Default: 300 W.",
           "enable_actuation": "Danger: enable only after every other controller writing to the grid setpoint has been disabled. Invalid measurements and unloads reset the setpoint to 0 W. Default: off."
         }
       }
-    },
-    "error": {
-      "invalid_soc_order": "SOC thresholds must be ordered minimum < charge < normal"
     }
   },
   "selector": {

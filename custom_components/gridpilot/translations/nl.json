@@ -47,25 +47,20 @@
         "description": "Deze waarden worden intern opgeslagen in de Home Assistant-config-entry van GridPilot. Er worden geen helpers aangemaakt.",
         "data": {
           "max_grid_power": "Maximale netafname",
-          "minimum_soc": "SOC voor maximaal bijladen",
           "charge_soc": "SOC voor volledige compensatie van het huisverbruik",
-          "normal_soc": "SOC voor normale batterijwerking",
           "minimum_charge_power": "Minimaal laadvermogen",
           "enable_actuation": "Actieve batterijsturing inschakelen"
         },
         "data_description": {
           "max_grid_power": "Positieve maximaal toegestane netafname in watt. Deze vaste waarde vervangt een afzonderlijke helper. Standaard: 2900 W.",
-          "minimum_soc": "Op of onder deze SOC vraagt GridPilot de maximaal toegestane netafname. Standaard: 10%.",
-          "charge_soc": "Op deze SOC is het berekende setpoint gelijk aan het actuele huisverbruik. Eronder wordt extra batterijlaadvermogen toegevoegd. Standaard: 15%.",
-          "normal_soc": "Op of boven deze SOC is het berekende setpoint 0 W. Tussen de laadgrens en normale grens bouwt de netcompensatie af naar nul. Standaard: 20%.",
+          "charge_soc": "Op deze SOC is het berekende setpoint gelijk aan het actuele huisverbruik. Maximaal bijladen start 5 procentpunt lager en normale batterijwerking start 5 procentpunt hoger. Standaard: 15%.",
           "minimum_charge_power": "Minimaal extra laadvermogen onder de laadgrens, voordat de limiet voor maximale netafname wordt toegepast. Standaard: 300 W.",
           "enable_actuation": "Gevaar: schakel dit alleen in nadat elke andere regeling die naar het netsetpoint schrijft is uitgeschakeld. Ongeldige meetwaarden en ontladen van de integratie zetten het setpoint terug op 0 W. Standaard: uit."
         }
       }
     },
     "error": {
-      "load_entities_required": "Selecteer één totale verbruikssensor of alle drie de fasesensoren",
-      "invalid_soc_order": "SOC-grenzen moeten minimum < laden < normaal zijn"
+      "load_entities_required": "Selecteer één totale verbruikssensor of alle drie de fasesensoren"
     },
     "abort": {"already_configured": "GridPilot is al geconfigureerd"}
   },
@@ -73,27 +68,20 @@
     "step": {
       "init": {
         "title": "Batterijcurve configureren",
-        "description": "GridPilot berekent een netsetpoint met deze oplopende SOC-grenzen. Actieve sturing is optioneel en mag niet naast een andere setpointregeling werken.",
+        "description": "GridPilot leidt de grenzen voor maximaal bijladen en normale batterijwerking 5 procentpunt onder en boven de ingestelde compensatie-SOC af. Actieve sturing mag niet naast een andere setpointregeling werken.",
         "data": {
           "max_grid_power": "Maximale netafname",
-          "minimum_soc": "SOC voor maximaal bijladen",
           "charge_soc": "SOC voor volledige compensatie van het huisverbruik",
-          "normal_soc": "SOC voor normale batterijwerking",
           "minimum_charge_power": "Minimaal laadvermogen",
           "enable_actuation": "Actieve batterijsturing inschakelen"
         },
         "data_description": {
           "max_grid_power": "Positieve maximaal toegestane netafname in watt, intern opgeslagen in GridPilot. Standaard: 2900 W.",
-          "minimum_soc": "Op of onder deze SOC vraagt GridPilot de maximaal toegestane netafname. Standaard: 10%.",
-          "charge_soc": "Op deze SOC is het berekende setpoint gelijk aan het actuele huisverbruik. Eronder wordt extra batterijlaadvermogen toegevoegd. Standaard: 15%.",
-          "normal_soc": "Op of boven deze SOC is het berekende setpoint 0 W. Tussen de laadgrens en normale grens bouwt de netcompensatie af naar nul. Standaard: 20%.",
+          "charge_soc": "Op deze SOC is het berekende setpoint gelijk aan het actuele huisverbruik. Maximaal bijladen start 5 procentpunt lager en normale batterijwerking start 5 procentpunt hoger. Standaard: 15%.",
           "minimum_charge_power": "Minimaal extra laadvermogen onder de laadgrens, voordat de limiet voor maximale netafname wordt toegepast. Standaard: 300 W.",
           "enable_actuation": "Gevaar: schakel dit alleen in nadat elke andere regeling die naar het netsetpoint schrijft is uitgeschakeld. Ongeldige meetwaarden en ontladen van de integratie zetten het setpoint terug op 0 W. Standaard: uit."
         }
       }
-    },
-    "error": {
-      "invalid_soc_order": "SOC-grenzen moeten minimum < laden < normaal zijn"
     }
   },
   "selector": {

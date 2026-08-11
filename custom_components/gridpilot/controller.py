@@ -29,14 +29,10 @@ from .const import (
     CONF_HOME_LOAD_L3,
     CONF_MAX_GRID_POWER,
     CONF_MINIMUM_CHARGE_POWER,
-    CONF_MINIMUM_SOC,
-    CONF_NORMAL_SOC,
     DEFAULT_CHARGE_SOC,
     DEFAULT_ENABLE_ACTUATION,
     DEFAULT_MAX_GRID_POWER,
     DEFAULT_MINIMUM_CHARGE_POWER,
-    DEFAULT_MINIMUM_SOC,
-    DEFAULT_NORMAL_SOC,
     MIN_ACTUATION_INTERVAL,
     MODE_UNAVAILABLE,
     UPDATE_INTERVAL,
@@ -117,11 +113,7 @@ class GridPilotController:
                 options = self.entry.options
                 max_grid_power = self._max_grid_power()
                 curve = BatteryCurve(
-                    minimum_soc=float(
-                        options.get(CONF_MINIMUM_SOC, DEFAULT_MINIMUM_SOC)
-                    ),
                     charge_soc=float(options.get(CONF_CHARGE_SOC, DEFAULT_CHARGE_SOC)),
-                    normal_soc=float(options.get(CONF_NORMAL_SOC, DEFAULT_NORMAL_SOC)),
                     minimum_charge_power=float(
                         options.get(
                             CONF_MINIMUM_CHARGE_POWER,

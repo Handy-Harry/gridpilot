@@ -16,8 +16,6 @@ from .const import (
     CONF_NORMAL_SOC,
     DEFAULT_CHARGE_SOC,
     DEFAULT_MINIMUM_CHARGE_POWER,
-    DEFAULT_MINIMUM_SOC,
-    DEFAULT_NORMAL_SOC,
     VERSION,
 )
 from .const import DOMAIN as DOMAIN
@@ -78,13 +76,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) ->
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) -> bool:
-    """Move version 1 control parameters into config-entry options."""
-    if entry.version > 2:
+    """Migrate legacy control parameters and SOC thresholds."""
+    if entry.version > 3:
         return False
 
+    data = dict(entry.data)
+    options = dict(entry.options)
+    version = entry.version
+
     if entry.version == 1:
-        data = dict(entry.data)
-        options = dict(entry.options)
         legacy_max_grid_power = data.get(CONF_MAX_GRID_POWER)
 
         if CONF_MAX_GRID_POWER not in options:
@@ -98,20 +98,23 @@ async def async_migrate_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) 
             data.pop(CONF_MAX_GRID_POWER, None)
 
         defaults = {
-            CONF_MINIMUM_SOC: DEFAULT_MINIMUM_SOC,
             CONF_CHARGE_SOC: DEFAULT_CHARGE_SOC,
-            CONF_NORMAL_SOC: DEFAULT_NORMAL_SOC,
             CONF_MINIMUM_CHARGE_POWER: DEFAULT_MINIMUM_CHARGE_POWER,
         }
         for key, value in defaults.items():
             options.setdefault(key, value)
 
+        version = 2
+
+    if version == 2:
+        options.setdefault(CONF_CHARGE_SOC, DEFAULT_CHARGE_SOC)
+        options.pop(CONF_MINIMUM_SOC, None)
+        options.pop(CONF_NORMAL_SOC, None)
+        version = 3
+
+    if version != entry.version or data != entry.data or options != entry.options:
         hass.config_entries.async_update_entry(
-            entry,
-            data=data,
-            options=options,
-            version=2,
-            minor_version=1,
+            entry, data=data, options=options, version=version, minor_version=0
         )
 
     return True

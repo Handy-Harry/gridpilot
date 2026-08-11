@@ -19,9 +19,7 @@ from custom_components.gridpilot.const import (
 @pytest.fixture
 def curve() -> BatteryCurve:
     return BatteryCurve(
-        minimum_soc=10,
         charge_soc=15,
-        normal_soc=20,
         minimum_charge_power=300,
     )
 
@@ -79,15 +77,12 @@ def test_grid_limit_caps_home_load_and_charging(curve: BatteryCurve) -> None:
     assert decision.requested_grid_setpoint == 2900
 
 
-@pytest.mark.parametrize(
-    "curve",
-    [
-        BatteryCurve(15, 10, 20, 300),
-        BatteryCurve(10, 20, 20, 300),
-        BatteryCurve(-1, 15, 20, 300),
-        BatteryCurve(10, 15, 101, 300),
-    ],
-)
+@pytest.mark.parametrize("curve", [BatteryCurve(4, 300), BatteryCurve(96, 300)])
 def test_invalid_curves_are_rejected(curve: BatteryCurve) -> None:
-    with pytest.raises(ValueError, match="SOC thresholds"):
+    with pytest.raises(ValueError, match="Charge SOC"):
         curve.validate()
+
+
+def test_soc_thresholds_are_derived_from_charge_soc(curve: BatteryCurve) -> None:
+    assert curve.minimum_soc == 10
+    assert curve.normal_soc == 20

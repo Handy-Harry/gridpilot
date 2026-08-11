@@ -10,7 +10,7 @@ GridPilot is a Home Assistant energy management integration focused on monitorin
 
 ## Current status
 
-Version `0.2.0` is a public preview. It remains in shadow mode by default.
+Version `0.2.1` is a public preview. It remains in shadow mode by default.
 Battery setpoint actuation can be enabled explicitly from the integration options
 after the existing battery controller has been disabled.
 
@@ -18,7 +18,9 @@ after the existing battery controller has been disabled.
 
 - UI-only configuration through a Home Assistant config flow.
 - Generic entity mapping with a Victron-oriented preset.
-- Integration-owned grid-power and battery-curve options without helpers.
+- Integration-owned grid-power and battery-curve options without helpers. The
+  maximum-charging and normal-operation SOC thresholds are derived 5 percentage
+  points below and above the configured full-compensation SOC.
 - Calculated grid setpoint and operating-mode sensors.
 - Measurement-validity binary sensor.
 - Bundled `custom:gridpilot-card` frontend card.

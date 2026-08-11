@@ -12,8 +12,6 @@ from custom_components.gridpilot.const import (
     CONF_HOME_LOAD,
     CONF_MAX_GRID_POWER,
     CONF_MINIMUM_CHARGE_POWER,
-    CONF_MINIMUM_SOC,
-    CONF_NORMAL_SOC,
     DOMAIN,
 )
 from custom_components.gridpilot.controller import GridPilotController
@@ -29,9 +27,7 @@ def _entry(enable_actuation: bool) -> MockConfigEntry:
         },
         options={
             CONF_MAX_GRID_POWER: 2900,
-            CONF_MINIMUM_SOC: 10,
             CONF_CHARGE_SOC: 15,
-            CONF_NORMAL_SOC: 20,
             CONF_MINIMUM_CHARGE_POWER: 300,
             CONF_ENABLE_ACTUATION: enable_actuation,
         },

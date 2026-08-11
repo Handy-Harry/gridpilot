@@ -22,15 +22,11 @@ from .const import (
     CONF_HOME_LOAD_L3,
     CONF_MAX_GRID_POWER,
     CONF_MINIMUM_CHARGE_POWER,
-    CONF_MINIMUM_SOC,
-    CONF_NORMAL_SOC,
     CONF_PROFILE,
     DEFAULT_CHARGE_SOC,
     DEFAULT_ENABLE_ACTUATION,
     DEFAULT_MAX_GRID_POWER,
     DEFAULT_MINIMUM_CHARGE_POWER,
-    DEFAULT_MINIMUM_SOC,
-    DEFAULT_NORMAL_SOC,
     DOMAIN,
     PROFILE_GENERIC,
     PROFILE_VICTRON,
@@ -48,8 +44,8 @@ def _entity_selector(domains: list[str]) -> selector.EntitySelector:
 class GridPilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle the GridPilot setup flow."""
 
-    VERSION = 2
-    MINOR_VERSION = 1
+    VERSION = 3
+    MINOR_VERSION = 0
 
     def __init__(self) -> None:
         self._data: dict[str, Any] = {}
@@ -160,8 +156,7 @@ class GridPilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Collect the initial control parameters."""
-        errors = _validate_control_options(user_input)
-        if user_input is not None and not errors:
+        if user_input is not None:
             return self.async_create_entry(
                 title="GridPilot", data=self._data, options=user_input
             )
@@ -169,7 +164,6 @@ class GridPilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="control",
             data_schema=_control_options_schema({}),
-            errors=errors,
         )
 
     @staticmethod
@@ -188,30 +182,13 @@ class GridPilotOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Edit SOC and charge-power options."""
-        errors = _validate_control_options(user_input)
-        if user_input is not None and not errors:
+        if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
         return self.async_show_form(
             step_id="init",
             data_schema=_control_options_schema(self.config_entry.options),
-            errors=errors,
         )
-
-
-def _validate_control_options(
-    user_input: dict[str, Any] | None,
-) -> dict[str, str]:
-    """Validate the control parameters shared by setup and options flows."""
-    if user_input is None:
-        return {}
-    if not (
-        user_input[CONF_MINIMUM_SOC]
-        < user_input[CONF_CHARGE_SOC]
-        < user_input[CONF_NORMAL_SOC]
-    ):
-        return {"base": "invalid_soc_order"}
-    return {}
 
 
 def _control_options_schema(current: dict[str, Any]) -> vol.Schema:
@@ -230,27 +207,11 @@ def _control_options_schema(current: dict[str, Any]) -> vol.Schema:
                 )
             ),
             vol.Required(
-                CONF_MINIMUM_SOC,
-                default=current.get(CONF_MINIMUM_SOC, DEFAULT_MINIMUM_SOC),
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=0, max=98, step=0.5, unit_of_measurement="%"
-                )
-            ),
-            vol.Required(
                 CONF_CHARGE_SOC,
                 default=current.get(CONF_CHARGE_SOC, DEFAULT_CHARGE_SOC),
             ): selector.NumberSelector(
                 selector.NumberSelectorConfig(
-                    min=1, max=99, step=0.5, unit_of_measurement="%"
-                )
-            ),
-            vol.Required(
-                CONF_NORMAL_SOC,
-                default=current.get(CONF_NORMAL_SOC, DEFAULT_NORMAL_SOC),
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=2, max=100, step=0.5, unit_of_measurement="%"
+                    min=5, max=95, step=0.5, unit_of_measurement="%"
                 )
             ),
             vol.Required(

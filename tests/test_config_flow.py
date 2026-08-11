@@ -14,8 +14,6 @@ from custom_components.gridpilot.const import (
     CONF_HOME_LOAD,
     CONF_MAX_GRID_POWER,
     CONF_MINIMUM_CHARGE_POWER,
-    CONF_MINIMUM_SOC,
-    CONF_NORMAL_SOC,
     CONF_PROFILE,
     DOMAIN,
     PROFILE_GENERIC,
@@ -58,9 +56,7 @@ async def test_complete_config_flow(hass: HomeAssistant) -> None:
 
     control_options = {
         CONF_MAX_GRID_POWER: 2900,
-        CONF_MINIMUM_SOC: 10,
         CONF_CHARGE_SOC: 15,
-        CONF_NORMAL_SOC: 20,
         CONF_MINIMUM_CHARGE_POWER: 300,
         CONF_ENABLE_ACTUATION: False,
     }
@@ -97,54 +93,13 @@ async def test_load_entity_is_required(hass: HomeAssistant) -> None:
     assert result["errors"] == {"base": "load_entities_required"}
 
 
-async def test_initial_control_step_rejects_invalid_soc_order(
-    hass: HomeAssistant,
-) -> None:
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_PROFILE: PROFILE_GENERIC}
-    )
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_BATTERY_SOC: "sensor.battery_soc",
-            CONF_BATTERY_POWER: "sensor.battery_power",
-        },
-    )
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_GRID_SETPOINT: "number.grid_setpoint",
-            CONF_HOME_LOAD: "sensor.home_load",
-        },
-    )
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_MAX_GRID_POWER: 2900,
-            CONF_MINIMUM_SOC: 15,
-            CONF_CHARGE_SOC: 10,
-            CONF_NORMAL_SOC: 20,
-            CONF_MINIMUM_CHARGE_POWER: 300,
-            CONF_ENABLE_ACTUATION: False,
-        },
-    )
-
-    assert result["type"] is FlowResultType.FORM
-    assert result["errors"] == {"base": "invalid_soc_order"}
-
-
 async def test_options_flow_updates_control_parameters(hass: HomeAssistant) -> None:
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={},
         options={
             CONF_MAX_GRID_POWER: 2900,
-            CONF_MINIMUM_SOC: 10,
             CONF_CHARGE_SOC: 15,
-            CONF_NORMAL_SOC: 20,
             CONF_MINIMUM_CHARGE_POWER: 300,
             CONF_ENABLE_ACTUATION: False,
         },
@@ -153,12 +108,16 @@ async def test_options_flow_updates_control_parameters(hass: HomeAssistant) -> N
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
     assert result["type"] is FlowResultType.FORM
+    assert {key.schema for key in result["data_schema"].schema} == {
+        CONF_MAX_GRID_POWER,
+        CONF_CHARGE_SOC,
+        CONF_MINIMUM_CHARGE_POWER,
+        CONF_ENABLE_ACTUATION,
+    }
 
     updated = {
         CONF_MAX_GRID_POWER: 3500,
-        CONF_MINIMUM_SOC: 12,
         CONF_CHARGE_SOC: 16,
-        CONF_NORMAL_SOC: 22,
         CONF_MINIMUM_CHARGE_POWER: 400,
         CONF_ENABLE_ACTUATION: True,
     }
@@ -167,23 +126,3 @@ async def test_options_flow_updates_control_parameters(hass: HomeAssistant) -> N
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == updated
-
-
-async def test_options_flow_rejects_invalid_soc_order(hass: HomeAssistant) -> None:
-    entry = MockConfigEntry(domain=DOMAIN, data={})
-    entry.add_to_hass(hass)
-
-    result = await hass.config_entries.options.async_init(entry.entry_id)
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"],
-        {
-            CONF_MAX_GRID_POWER: 2900,
-            CONF_MINIMUM_SOC: 15,
-            CONF_CHARGE_SOC: 10,
-            CONF_NORMAL_SOC: 20,
-            CONF_MINIMUM_CHARGE_POWER: 300,
-            CONF_ENABLE_ACTUATION: False,
-        },
-    )
-    assert result["type"] is FlowResultType.FORM
-    assert result["errors"] == {"base": "invalid_soc_order"}

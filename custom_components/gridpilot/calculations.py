@@ -11,6 +11,7 @@ from .const import (
     MODE_NEUTRAL,
     MODE_NORMAL,
     MODE_TAPERING,
+    SOC_THRESHOLD_OFFSET,
 )
 from .models import ControlDecision
 
@@ -19,17 +20,23 @@ from .models import ControlDecision
 class BatteryCurve:
     """Configurable battery control curve."""
 
-    minimum_soc: float
     charge_soc: float
-    normal_soc: float
     minimum_charge_power: float
+
+    @property
+    def minimum_soc(self) -> float:
+        """Return the threshold for maximum charging."""
+        return self.charge_soc - SOC_THRESHOLD_OFFSET
+
+    @property
+    def normal_soc(self) -> float:
+        """Return the threshold for normal battery operation."""
+        return self.charge_soc + SOC_THRESHOLD_OFFSET
 
     def validate(self) -> None:
         """Raise when the curve is unsafe or inconsistent."""
-        if not 0 <= self.minimum_soc < self.charge_soc < self.normal_soc <= 100:
-            raise ValueError(
-                "SOC thresholds must satisfy 0 <= minimum < charge < normal <= 100"
-            )
+        if not SOC_THRESHOLD_OFFSET <= self.charge_soc <= 100 - SOC_THRESHOLD_OFFSET:
+            raise ValueError("Charge SOC must be between 5 and 95 percent")
         if self.minimum_charge_power < 0:
             raise ValueError("Minimum charge power cannot be negative")
 

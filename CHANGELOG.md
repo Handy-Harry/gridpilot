@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 - 2026-08-11
+
+- Replace three configurable SOC thresholds with one full-compensation SOC.
+- Derive maximum charging and normal battery operation 5 percentage points below and above it.
+- Migrate existing config entries while preserving active-control settings.
+
 ## 0.2.0 - 2026-08-11
 
 - Add opt-in battery setpoint actuation, disabled by default.
