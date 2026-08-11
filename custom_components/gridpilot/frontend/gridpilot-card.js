@@ -22,16 +22,8 @@ class GridPilotCard extends HTMLElement {
           padding: 10px 18px;
         }
         .heading {
-          align-items: center;
-          display: flex;
-          gap: 8px;
           margin-bottom: 6px;
           min-height: 28px;
-        }
-        .brand-icon {
-          height: 28px;
-          object-fit: contain;
-          width: 28px;
         }
         .title {
           color: var(--primary-text-color);
@@ -156,11 +148,10 @@ class GridPilotCard extends HTMLElement {
           .stripes { animation: none !important; }
         }
       </style>
-      <ha-card tabindex="0">
-        <div class="heading">
-          <img class="brand-icon" src="/gridpilot_brand/icon.svg?v=0.1.7" alt="">
-          <div class="title"></div>
-        </div>
+        <ha-card tabindex="0">
+          <div class="heading">
+            <div class="title"></div>
+          </div>
         <div class="battery">
           <div class="body">
             <div class="level"><div class="stripes"></div></div>

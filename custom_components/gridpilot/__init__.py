@@ -23,6 +23,7 @@ from .const import DOMAIN as DOMAIN
 FRONTEND_PATH = Path(__file__).parent / "frontend"
 BRAND_PATH = Path(__file__).parent / "brand"
 FRONTEND_URL = f"/gridpilot_static/gridpilot-card.js?v={VERSION}"
+DATA_FRONTEND_REGISTERED = f"{DOMAIN}_frontend_registered"
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -34,15 +35,23 @@ if TYPE_CHECKING:
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Register the bundled frontend once."""
+    return await _async_setup_frontend(hass)
+
+
+async def _async_setup_frontend(hass: HomeAssistant) -> bool:
+    """Serve and announce the card module for new and existing frontend sessions."""
     from homeassistant.components.frontend import add_extra_js_url
     from homeassistant.components.http import StaticPathConfig
 
-    await hass.http.async_register_static_paths(
-        [
-            StaticPathConfig("/gridpilot_static", str(FRONTEND_PATH), False),
-            StaticPathConfig("/gridpilot_brand", str(BRAND_PATH), False),
-        ]
-    )
+    if not hass.data.get(DATA_FRONTEND_REGISTERED):
+        await hass.http.async_register_static_paths(
+            [
+                StaticPathConfig("/gridpilot_static", str(FRONTEND_PATH), False),
+                StaticPathConfig("/gridpilot_brand", str(BRAND_PATH), False),
+            ]
+        )
+        hass.data[DATA_FRONTEND_REGISTERED] = True
+
     add_extra_js_url(hass, FRONTEND_URL)
     return True
 
@@ -54,6 +63,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) ->
     from .controller import GridPilotController
     from .runtime import GridPilotRuntime
 
+    await _async_setup_frontend(hass)
     platforms = [Platform.SENSOR, Platform.BINARY_SENSOR]
     controller = GridPilotController(hass, entry)
     entry.runtime_data = GridPilotRuntime(controller=controller)

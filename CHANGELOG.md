@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.11 - 2026-08-11
+
+- Update the GridPilot meter artwork with the supplied v5 design.
+
+## 0.1.10 - 2026-08-11
+
+- Replace the GridPilot integration and repository artwork with the supplied capacity-tariff meter logo.
+
+## 0.1.9 - 2026-08-11
+
+- Remove the brand icon from the GridPilot dashboard card title.
+
+## 0.1.8 - 2026-08-11
+
+- Re-announce the bundled dashboard card whenever GridPilot loads, including after an integration reload.
+
 ## 0.1.7 - 2026-08-10
 
 - Replace the smart-meter artwork with the compact 256 px version.
