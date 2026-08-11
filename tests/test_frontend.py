@@ -1,6 +1,6 @@
 """Tests for GridPilot's bundled dashboard card registration."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from homeassistant.core import HomeAssistant
 
@@ -11,8 +11,10 @@ from custom_components.gridpilot import (
 )
 
 
-async def test_frontend_resource_is_reannounced_on_setup(hass: HomeAssistant) -> None:
+async def test_frontend_resource_is_reannounced_on_setup() -> None:
     """Register static paths once but announce the module for every setup call."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.data = {}
     hass.http.async_register_static_paths = AsyncMock()
 
     with patch("homeassistant.components.frontend.add_extra_js_url") as add_resource:

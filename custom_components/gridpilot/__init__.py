@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from homeassistant.helpers import config_validation as cv
+
 from .calculations import normalize_power
 from .const import (
     CONF_CHARGE_SOC,
@@ -19,6 +21,8 @@ from .const import (
     VERSION,
 )
 from .const import DOMAIN as DOMAIN
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 FRONTEND_PATH = Path(__file__).parent / "frontend"
 BRAND_PATH = Path(__file__).parent / "brand"
