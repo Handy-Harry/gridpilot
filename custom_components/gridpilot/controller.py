@@ -61,6 +61,7 @@ from .const import (
     DEFAULT_CHARGE_SOC,
     DEFAULT_ENABLE_ACTUATION,
     DEFAULT_ENABLE_EV_ACTUATION,
+    DEFAULT_EV_BATTERY_MODE,
     DEFAULT_EV_DISCONNECTED_STATE,
     DEFAULT_EV_MANUAL_MODE,
     DEFAULT_EV_MAX_CURRENT,
@@ -442,10 +443,17 @@ class GridPilotController:
             self._set_unavailable_ev_decision(str(err), strategy)
 
     def _selected_ev_strategy(self, options: dict[str, Any]) -> str:
-        """Return the selected internal strategy, with battery-to-EV priority."""
-        if (override := options.get(CONF_EV_OVERRIDE)) and self._state(
-            str(override)
-        ) == "on":
+        """Return the selected strategy, with the configured mode taking priority."""
+        mode_entity = options.get(CONF_EV_MODE)
+        if not mode_entity:
+            raise ValueError("EV charging mode is not configured")
+        mode = self._state(str(mode_entity))
+        if mode == str(options.get(CONF_EV_PV_MODE, DEFAULT_EV_PV_MODE)):
+            return EV_STRATEGY_PV
+        if mode == str(options.get(CONF_EV_MANUAL_MODE, DEFAULT_EV_MANUAL_MODE)):
+            return EV_STRATEGY_MANUAL
+
+        if mode == DEFAULT_EV_BATTERY_MODE:
             battery_options = {
                 CONF_GRID_POWER,
                 CONF_EV_BATTERY_SOC,
@@ -458,14 +466,6 @@ class GridPilotController:
                 if all(options.get(key) for key in battery_options)
                 else EV_STRATEGY_NONE
             )
-        mode_entity = options.get(CONF_EV_MODE)
-        if not mode_entity:
-            raise ValueError("EV charging mode is not configured")
-        mode = self._state(str(mode_entity))
-        if mode == str(options.get(CONF_EV_PV_MODE, DEFAULT_EV_PV_MODE)):
-            return EV_STRATEGY_PV
-        if mode == str(options.get(CONF_EV_MANUAL_MODE, DEFAULT_EV_MANUAL_MODE)):
-            return EV_STRATEGY_MANUAL
         return EV_STRATEGY_NONE
 
     def _set_unavailable_ev_decision(self, reason: str, strategy: str) -> None:

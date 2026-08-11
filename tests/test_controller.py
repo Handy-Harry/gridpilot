@@ -366,7 +366,7 @@ async def test_strategy_change_bypasses_normal_ev_rate_limit(
     hass: HomeAssistant,
 ) -> None:
     _set_valid_states(hass)
-    _set_ev_states(hass)
+    _set_ev_states(hass, mode="PV laden")
     _set_manual_ev_state(hass, 10)
     calls: list[ServiceCall] = []
     hass.services.async_register("number", "set_value", calls.append)
@@ -395,11 +395,28 @@ async def test_strategy_change_bypasses_normal_ev_rate_limit(
     assert [call.data["value"] for call in calls] == [6, 10]
 
 
-async def test_battery_to_ev_toggle_has_strategy_priority(
+async def test_battery_to_ev_toggle_does_not_override_pv_mode(
     hass: HomeAssistant,
 ) -> None:
     _set_valid_states(hass)
     _set_ev_states(hass, mode="PV laden")
+    _set_battery_to_ev_states(hass)
+    controller = GridPilotController(
+        hass,
+        _entry(False, configure_battery_to_ev=True),
+    )
+
+    await controller.async_refresh()
+
+    assert controller.ev_decision.valid
+    assert controller.ev_decision.strategy == "pv"
+
+
+async def test_battery_to_ev_toggle_is_explicit_when_mode_is_not_pv_or_manual(
+    hass: HomeAssistant,
+) -> None:
+    _set_valid_states(hass)
+    _set_ev_states(hass, mode="Thuisbatterij naar auto")
     _set_battery_to_ev_states(hass)
     controller = GridPilotController(
         hass,
@@ -449,7 +466,7 @@ async def test_battery_to_ev_handoff_starts_at_six_amps(
     hass: HomeAssistant,
 ) -> None:
     _set_valid_states(hass)
-    _set_ev_states(hass, mode="Manueel")
+    _set_ev_states(hass, mode="Uit")
     _set_manual_ev_state(hass, 16)
     _set_battery_to_ev_states(hass, enabled=False)
     hass.states.async_set(
@@ -472,6 +489,7 @@ async def test_battery_to_ev_handoff_starts_at_six_amps(
 
     await controller.async_refresh()
     hass.states.async_set("input_boolean.battery_to_ev", "on")
+    hass.states.async_set("input_select.ev_mode", "Thuisbatterij naar auto")
     await controller.async_refresh()
 
     assert controller.ev_decision.strategy == "battery_to_ev"
@@ -482,7 +500,7 @@ async def test_battery_to_ev_handoff_to_pv_does_not_use_stop_delay(
     hass: HomeAssistant,
 ) -> None:
     _set_valid_states(hass)
-    _set_ev_states(hass)
+    _set_ev_states(hass, mode="Thuisbatterij naar auto")
     _set_battery_to_ev_states(hass)
     controller = GridPilotController(
         hass,
@@ -491,6 +509,7 @@ async def test_battery_to_ev_handoff_to_pv_does_not_use_stop_delay(
 
     await controller.async_refresh()
     hass.states.async_set("input_boolean.battery_to_ev", "off")
+    hass.states.async_set("input_select.ev_mode", "PV laden")
     hass.states.async_set(
         "sensor.battery_power", "0", {"unit_of_measurement": UnitOfPower.WATT}
     )
@@ -514,7 +533,7 @@ async def test_battery_reserve_pause_bypasses_ev_rate_limit(
     hass: HomeAssistant,
 ) -> None:
     _set_valid_states(hass)
-    _set_ev_states(hass)
+    _set_ev_states(hass, mode="Thuisbatterij naar auto")
     _set_battery_to_ev_states(hass)
     calls: list[ServiceCall] = []
     hass.services.async_register("number", "set_value", calls.append)

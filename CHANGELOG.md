@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1 - 2026-08-11
+
+- Make the laadmodus dropdown authoritative over the battery-to-EV override.
+- Add explicit `Thuisbatterij naar auto` mode selection.
+- Validate PV, manual and battery-to-EV mode precedence with controller tests.
+
 ## 0.4.0 - 2026-08-11
 
 - Add coordinated PV, manual and battery-to-EV charging strategies using existing UI-managed helpers.
