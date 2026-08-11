@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 - 2026-08-11
+
+- Calculate PV surplus and phase-aware EV target current inside GridPilot.
+- Add 98/97% battery-full hysteresis, smoothing, ramping and restart protection.
+- Add opt-in EV current actuation with a safe 5 A pause setpoint.
+- Expose EV decision, health and shadow-mode entities.
+- Add configurable battery-power polarity and optional applied-current feedback.
+- Validate the EV actuator's safe 5 A pause value before active control.
+
 ## 0.2.1 - 2026-08-11
 
 - Replace three configurable SOC thresholds with one full-compensation SOC.

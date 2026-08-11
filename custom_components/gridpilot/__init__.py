@@ -77,7 +77,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) ->
 
 async def async_migrate_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) -> bool:
     """Migrate legacy control parameters and SOC thresholds."""
-    if entry.version > 3:
+    if entry.version > 4:
         return False
 
     data = dict(entry.data)
@@ -111,6 +111,9 @@ async def async_migrate_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) 
         options.pop(CONF_MINIMUM_SOC, None)
         options.pop(CONF_NORMAL_SOC, None)
         version = 3
+
+    if version == 3:
+        version = 4
 
     if version != entry.version or data != entry.data or options != entry.options:
         hass.config_entries.async_update_entry(

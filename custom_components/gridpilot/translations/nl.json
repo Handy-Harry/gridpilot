@@ -42,6 +42,46 @@
           "home_load_l3": "Actueel huisverbruik op fase L3 in W of kW. Vul L1, L2 en L3 in wanneer geen sensor voor totaal huisverbruik is geselecteerd."
         }
       },
+      "ev": {
+        "title": "PV-overschot en EV-laden configureren",
+        "description": "De entiteitskoppelingen zijn optioneel. GridPilot berekent pas EV-laadstroom wanneer alle vereiste koppelingen zijn ingesteld en schrijft nooit tenzij EV-aansturing expliciet is ingeschakeld.",
+        "data": {
+          "grid_power": "Netvermogen",
+          "ev_power": "EV-laadvermogen",
+          "ev_connection_state": "EV-verbindingsstatus",
+          "ev_current_limit": "Schrijfbare EV-stroomlimiet",
+          "ev_current_feedback": "Toegepaste EV-stroomlimiet (optioneel)",
+          "ev_voltage": "EV-fasespanning",
+          "ev_phase_mode": "EV-fasemodus",
+          "ev_mode": "Laadmodus",
+          "ev_override": "Batterij-naar-EV-overname (optioneel)",
+          "battery_charge_positive": "Positief batterijvermogen betekent laden",
+          "ev_pv_mode": "Waarde voor PV-laadmodus",
+          "ev_disconnected_state": "Waarde voor niet verbonden",
+          "ev_priority": "PV-prioriteit voor EV",
+          "ev_max_current": "Maximale EV-stroom",
+          "pv_safety_margin": "PV-veiligheidsmarge",
+          "enable_ev_actuation": "Actieve EV-stroomregeling inschakelen"
+        },
+        "data_description": {
+          "grid_power": "Netvermogen in W of kW, positief voor afname en negatief voor injectie.",
+          "ev_power": "Actueel EV-laadvermogen in W of kW.",
+          "ev_connection_state": "Entiteit waarvan de status aangeeft of een EV verbonden is.",
+          "ev_current_limit": "Schrijfbare number-entiteit in A. Alfen Modbus-voorbeeld: number.alfen_max_current_limit_s1.",
+          "ev_current_feedback": "Optionele sensor of number met de toegepaste stroomlimiet.",
+          "ev_voltage": "Fase-nulspanning waarmee beschikbaar vermogen naar stroom wordt omgerekend.",
+          "ev_phase_mode": "Select of sensor waarvan de status met 1 of 3 begint.",
+          "ev_mode": "Select-entiteit waarmee de laadmodus wordt gekozen.",
+          "ev_override": "Wanneer deze aan staat, laat GridPilot de EV-stroomregeling over aan de batterij-naar-EV-regeling.",
+          "battery_charge_positive": "Schakel in wanneer positief batterijvermogen laden betekent; schakel uit wanneer negatief batterijvermogen laden betekent.",
+          "ev_pv_mode": "Exacte laadmodusstatus waarin GridPilot PV-laden mag regelen.",
+          "ev_disconnected_state": "Exacte verbindingsstatus die betekent dat geen EV verbonden is.",
+          "ev_priority": "Aandeel van beschikbare PV voor de EV zolang de thuisbatterij onder 98% blijft.",
+          "ev_max_current": "Maximale stroom die GridPilot mag vragen. Standaard: 16 A.",
+          "pv_safety_margin": "Vermogen dat niet voor EV-laden wordt gebruikt om onbedoelde netafname te beperken.",
+          "enable_ev_actuation": "Gevaar: schakel dit alleen in nadat elke andere PV-regeling die naar de EV-stroomlimiet schrijft is uitgeschakeld. Standaard: uit."
+        }
+      },
       "control": {
         "title": "Regelparameters configureren",
         "description": "Deze waarden worden intern opgeslagen in de Home Assistant-config-entry van GridPilot. Er worden geen helpers aangemaakt.",
@@ -81,6 +121,46 @@
           "minimum_charge_power": "Minimaal extra laadvermogen onder de laadgrens, voordat de limiet voor maximale netafname wordt toegepast. Standaard: 300 W.",
           "enable_actuation": "Gevaar: schakel dit alleen in nadat elke andere regeling die naar het netsetpoint schrijft is uitgeschakeld. Ongeldige meetwaarden en ontladen van de integratie zetten het setpoint terug op 0 W. Standaard: uit."
         }
+      },
+      "ev": {
+        "title": "PV-overschot en EV-laden configureren",
+        "description": "GridPilot stuurt alleen in de ingestelde PV-modus. Handmatig laden en batterij-naar-EV blijven buiten GridPilot v0.3.",
+        "data": {
+          "grid_power": "Netvermogen",
+          "ev_power": "EV-laadvermogen",
+          "ev_connection_state": "EV-verbindingsstatus",
+          "ev_current_limit": "Schrijfbare EV-stroomlimiet",
+          "ev_current_feedback": "Toegepaste EV-stroomlimiet (optioneel)",
+          "ev_voltage": "EV-fasespanning",
+          "ev_phase_mode": "EV-fasemodus",
+          "ev_mode": "Laadmodus",
+          "ev_override": "Batterij-naar-EV-overname (optioneel)",
+          "battery_charge_positive": "Positief batterijvermogen betekent laden",
+          "ev_pv_mode": "Waarde voor PV-laadmodus",
+          "ev_disconnected_state": "Waarde voor niet verbonden",
+          "ev_priority": "PV-prioriteit voor EV",
+          "ev_max_current": "Maximale EV-stroom",
+          "pv_safety_margin": "PV-veiligheidsmarge",
+          "enable_ev_actuation": "Actieve EV-stroomregeling inschakelen"
+        },
+        "data_description": {
+          "grid_power": "Netvermogen in W of kW, positief voor afname en negatief voor injectie.",
+          "ev_power": "Actueel EV-laadvermogen in W of kW.",
+          "ev_connection_state": "Entiteit waarvan de status aangeeft of een EV verbonden is.",
+          "ev_current_limit": "Schrijfbare number-entiteit in A. Alfen Modbus-voorbeeld: number.alfen_max_current_limit_s1.",
+          "ev_current_feedback": "Optionele sensor of number met de toegepaste stroomlimiet.",
+          "ev_voltage": "Fase-nulspanning waarmee beschikbaar vermogen naar stroom wordt omgerekend.",
+          "ev_phase_mode": "Select of sensor waarvan de status met 1 of 3 begint.",
+          "ev_mode": "Select-entiteit waarmee de laadmodus wordt gekozen.",
+          "ev_override": "Wanneer deze aan staat, laat GridPilot de EV-stroomregeling over aan de batterij-naar-EV-regeling.",
+          "battery_charge_positive": "Schakel in wanneer positief batterijvermogen laden betekent; schakel uit wanneer negatief batterijvermogen laden betekent.",
+          "ev_pv_mode": "Exacte laadmodusstatus waarin GridPilot PV-laden mag regelen.",
+          "ev_disconnected_state": "Exacte verbindingsstatus die betekent dat geen EV verbonden is.",
+          "ev_priority": "Aandeel van beschikbare PV voor de EV zolang de thuisbatterij onder 98% blijft.",
+          "ev_max_current": "Maximale stroom die GridPilot mag vragen. Standaard: 16 A.",
+          "pv_safety_margin": "Vermogen dat niet voor EV-laden wordt gebruikt om onbedoelde netafname te beperken.",
+          "enable_ev_actuation": "Gevaar: schakel dit alleen in nadat elke andere PV-regeling die naar de EV-stroomlimiet schrijft is uitgeschakeld. Standaard: uit."
+        }
       }
     }
   },
@@ -103,12 +183,31 @@
           "normal": "Normaal"
         }
       },
-      "control_reason": {"name": "Reden van regeling"}
+      "control_reason": {"name": "Reden van regeling"},
+      "available_pv_power": {"name": "Beschikbaar PV-vermogen"},
+      "ev_target_current": {"name": "EV-doelstroom"},
+      "ev_operating_mode": {
+        "name": "EV-bedrijfsmodus",
+        "state": {
+          "unavailable": "Niet beschikbaar",
+          "inactive": "Inactief",
+          "disconnected": "Niet verbonden",
+          "blocked": "Geblokkeerd",
+          "waiting": "Wachten",
+          "charging": "Laden",
+          "stop_delay": "Stopvertraging",
+          "restart_blocked": "Herstart geblokkeerd"
+        }
+      },
+      "ev_control_reason": {"name": "Reden van EV-regeling"}
     },
     "binary_sensor": {
       "measurements_valid": {"name": "Meetwaarden geldig"},
       "shadow_mode": {"name": "Schaduwmodus"},
-      "actuation_healthy": {"name": "Aansturing gezond"}
+      "actuation_healthy": {"name": "Aansturing gezond"},
+      "ev_measurements_valid": {"name": "EV-meetwaarden geldig"},
+      "ev_shadow_mode": {"name": "EV-schaduwmodus"},
+      "ev_actuation_healthy": {"name": "EV-aansturing gezond"}
     }
   }
 }

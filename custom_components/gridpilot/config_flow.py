@@ -11,10 +11,25 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import (
+    CONF_BATTERY_CHARGE_POSITIVE,
     CONF_BATTERY_POWER,
     CONF_BATTERY_SOC,
     CONF_CHARGE_SOC,
     CONF_ENABLE_ACTUATION,
+    CONF_ENABLE_EV_ACTUATION,
+    CONF_EV_CONNECTION_STATE,
+    CONF_EV_CURRENT_FEEDBACK,
+    CONF_EV_CURRENT_LIMIT,
+    CONF_EV_DISCONNECTED_STATE,
+    CONF_EV_MAX_CURRENT,
+    CONF_EV_MODE,
+    CONF_EV_OVERRIDE,
+    CONF_EV_PHASE_MODE,
+    CONF_EV_POWER,
+    CONF_EV_PRIORITY,
+    CONF_EV_PV_MODE,
+    CONF_EV_VOLTAGE,
+    CONF_GRID_POWER,
     CONF_GRID_SETPOINT,
     CONF_HOME_LOAD,
     CONF_HOME_LOAD_L1,
@@ -23,10 +38,18 @@ from .const import (
     CONF_MAX_GRID_POWER,
     CONF_MINIMUM_CHARGE_POWER,
     CONF_PROFILE,
+    CONF_PV_SAFETY_MARGIN,
+    DEFAULT_BATTERY_CHARGE_POSITIVE,
     DEFAULT_CHARGE_SOC,
     DEFAULT_ENABLE_ACTUATION,
+    DEFAULT_ENABLE_EV_ACTUATION,
+    DEFAULT_EV_DISCONNECTED_STATE,
+    DEFAULT_EV_MAX_CURRENT,
+    DEFAULT_EV_PRIORITY,
+    DEFAULT_EV_PV_MODE,
     DEFAULT_MAX_GRID_POWER,
     DEFAULT_MINIMUM_CHARGE_POWER,
+    DEFAULT_PV_SAFETY_MARGIN,
     DOMAIN,
     PROFILE_GENERIC,
     PROFILE_VICTRON,
@@ -44,11 +67,12 @@ def _entity_selector(domains: list[str]) -> selector.EntitySelector:
 class GridPilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle the GridPilot setup flow."""
 
-    VERSION = 3
+    VERSION = 4
     MINOR_VERSION = 0
 
     def __init__(self) -> None:
         self._data: dict[str, Any] = {}
+        self._options: dict[str, Any] = {}
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -116,7 +140,7 @@ class GridPilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "load_entities_required"
             else:
                 self._data.update(user_input)
-                return await self.async_step_control()
+                return await self.async_step_ev()
 
         victron = self._data.get(CONF_PROFILE) == PROFILE_VICTRON
         setpoint_key = vol.Required(
@@ -152,13 +176,27 @@ class GridPilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
         return self.async_show_form(step_id="energy", data_schema=schema, errors=errors)
 
+    async def async_step_ev(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Collect optional PV-surplus and EV control mappings."""
+        if user_input is not None:
+            self._options.update(user_input)
+            return await self.async_step_control()
+
+        return self.async_show_form(
+            step_id="ev",
+            data_schema=_ev_options_schema({}),
+        )
+
     async def async_step_control(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Collect the initial control parameters."""
         if user_input is not None:
+            self._options.update(user_input)
             return self.async_create_entry(
-                title="GridPilot", data=self._data, options=user_input
+                title="GridPilot", data=self._data, options=self._options
             )
 
         return self.async_show_form(
@@ -178,16 +216,33 @@ class GridPilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class GridPilotOptionsFlow(config_entries.OptionsFlow):
     """Configure the battery curve."""
 
+    def __init__(self) -> None:
+        self._options: dict[str, Any] = {}
+
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Edit SOC and charge-power options."""
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            self._options.update(user_input)
+            return await self.async_step_ev()
 
         return self.async_show_form(
             step_id="init",
             data_schema=_control_options_schema(self.config_entry.options),
+        )
+
+    async def async_step_ev(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Edit PV-surplus and EV-current options."""
+        if user_input is not None:
+            self._options.update(user_input)
+            return self.async_create_entry(title="", data=self._options)
+
+        return self.async_show_form(
+            step_id="ev",
+            data_schema=_ev_options_schema(self.config_entry.options),
         )
 
 
@@ -233,3 +288,84 @@ def _control_options_schema(current: dict[str, Any]) -> vol.Schema:
             ): selector.BooleanSelector(),
         }
     )
+
+
+def _ev_options_schema(current: dict[str, Any]) -> vol.Schema:
+    """Build the optional PV-surplus and EV-current schema."""
+
+    def optional_entity(key: str, domains: list[str]) -> tuple[Any, Any]:
+        marker = (
+            vol.Optional(
+                key,
+                description={"suggested_value": current[key]},
+            )
+            if key in current
+            else vol.Optional(key)
+        )
+        return marker, _entity_selector(domains)
+
+    fields = dict(
+        [
+            optional_entity(CONF_GRID_POWER, ["sensor"]),
+            optional_entity(CONF_EV_POWER, ["sensor"]),
+            optional_entity(CONF_EV_CONNECTION_STATE, ["sensor"]),
+            optional_entity(CONF_EV_CURRENT_LIMIT, ["number"]),
+            optional_entity(CONF_EV_CURRENT_FEEDBACK, ["sensor", "number"]),
+            optional_entity(CONF_EV_VOLTAGE, ["sensor"]),
+            optional_entity(CONF_EV_PHASE_MODE, ["select", "sensor"]),
+            optional_entity(CONF_EV_MODE, ["input_select", "select"]),
+            optional_entity(CONF_EV_OVERRIDE, ["input_boolean", "binary_sensor"]),
+        ]
+    )
+    fields.update(
+        {
+            vol.Required(
+                CONF_BATTERY_CHARGE_POSITIVE,
+                default=current.get(
+                    CONF_BATTERY_CHARGE_POSITIVE,
+                    DEFAULT_BATTERY_CHARGE_POSITIVE,
+                ),
+            ): selector.BooleanSelector(),
+            vol.Required(
+                CONF_EV_PV_MODE,
+                default=current.get(CONF_EV_PV_MODE, DEFAULT_EV_PV_MODE),
+            ): selector.TextSelector(),
+            vol.Required(
+                CONF_EV_DISCONNECTED_STATE,
+                default=current.get(
+                    CONF_EV_DISCONNECTED_STATE, DEFAULT_EV_DISCONNECTED_STATE
+                ),
+            ): selector.TextSelector(),
+            vol.Required(
+                CONF_EV_PRIORITY,
+                default=current.get(CONF_EV_PRIORITY, DEFAULT_EV_PRIORITY),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=0, max=100, step=5, unit_of_measurement="%"
+                )
+            ),
+            vol.Required(
+                CONF_EV_MAX_CURRENT,
+                default=current.get(CONF_EV_MAX_CURRENT, DEFAULT_EV_MAX_CURRENT),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=6, max=32, step=0.5, unit_of_measurement="A"
+                )
+            ),
+            vol.Required(
+                CONF_PV_SAFETY_MARGIN,
+                default=current.get(CONF_PV_SAFETY_MARGIN, DEFAULT_PV_SAFETY_MARGIN),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=0, max=2000, step=50, unit_of_measurement="W"
+                )
+            ),
+            vol.Required(
+                CONF_ENABLE_EV_ACTUATION,
+                default=current.get(
+                    CONF_ENABLE_EV_ACTUATION, DEFAULT_ENABLE_EV_ACTUATION
+                ),
+            ): selector.BooleanSelector(),
+        }
+    )
+    return vol.Schema(fields)

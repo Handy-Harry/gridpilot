@@ -5,11 +5,16 @@ from typing import Final
 
 DOMAIN: Final = "gridpilot"
 NAME: Final = "GridPilot"
-VERSION: Final = "0.2.1"
+VERSION: Final = "0.3.0"
 
 PLATFORMS: Final = ["sensor", "binary_sensor"]
 UPDATE_INTERVAL: Final = timedelta(minutes=1)
 MIN_ACTUATION_INTERVAL: Final = timedelta(seconds=10)
+EV_UPDATE_INTERVAL: Final = timedelta(seconds=10)
+EV_POWER_MEDIAN_WINDOW: Final = timedelta(seconds=45)
+EV_CURRENT_MEDIAN_WINDOW: Final = timedelta(minutes=5)
+EV_STOP_DELAY: Final = timedelta(minutes=5)
+EV_RESTART_DELAY: Final = timedelta(minutes=10)
 
 CONF_PROFILE: Final = "profile"
 CONF_BATTERY_SOC: Final = "battery_soc"
@@ -26,12 +31,44 @@ CONF_CHARGE_SOC: Final = "charge_soc"
 CONF_NORMAL_SOC: Final = "normal_soc"
 CONF_MINIMUM_CHARGE_POWER: Final = "minimum_charge_power"
 CONF_ENABLE_ACTUATION: Final = "enable_actuation"
+CONF_GRID_POWER: Final = "grid_power"
+CONF_EV_POWER: Final = "ev_power"
+CONF_EV_CONNECTION_STATE: Final = "ev_connection_state"
+CONF_EV_CURRENT_LIMIT: Final = "ev_current_limit"
+CONF_EV_CURRENT_FEEDBACK: Final = "ev_current_feedback"
+CONF_EV_VOLTAGE: Final = "ev_voltage"
+CONF_EV_PHASE_MODE: Final = "ev_phase_mode"
+CONF_EV_MODE: Final = "ev_mode"
+CONF_EV_OVERRIDE: Final = "ev_override"
+CONF_BATTERY_CHARGE_POSITIVE: Final = "battery_charge_positive"
+CONF_EV_PV_MODE: Final = "ev_pv_mode"
+CONF_EV_DISCONNECTED_STATE: Final = "ev_disconnected_state"
+CONF_EV_PRIORITY: Final = "ev_priority"
+CONF_EV_MAX_CURRENT: Final = "ev_max_current"
+CONF_PV_SAFETY_MARGIN: Final = "pv_safety_margin"
+CONF_ENABLE_EV_ACTUATION: Final = "enable_ev_actuation"
 
 DEFAULT_CHARGE_SOC: Final = 15.0
 SOC_THRESHOLD_OFFSET: Final = 5.0
 DEFAULT_MINIMUM_CHARGE_POWER: Final = 300.0
 DEFAULT_MAX_GRID_POWER: Final = 2_900.0
 DEFAULT_ENABLE_ACTUATION: Final = False
+DEFAULT_ENABLE_EV_ACTUATION: Final = False
+DEFAULT_BATTERY_CHARGE_POSITIVE: Final = True
+DEFAULT_EV_PV_MODE: Final = "PV laden"
+DEFAULT_EV_DISCONNECTED_STATE: Final = "Available"
+DEFAULT_EV_PRIORITY: Final = 50.0
+DEFAULT_EV_MAX_CURRENT: Final = 16.0
+DEFAULT_PV_SAFETY_MARGIN: Final = 0.0
+
+EV_PAUSE_CURRENT: Final = 5.0
+EV_MIN_CURRENT: Final = 6.0
+EV_START_CURRENT: Final = 7.0
+EV_STOP_CURRENT: Final = 5.5
+EV_CURRENT_STEP: Final = 0.5
+EV_CURRENT_DEADBAND: Final = 0.75
+BATTERY_FULL_SOC: Final = 98.0
+BATTERY_FULL_RELEASE_SOC: Final = 97.0
 
 PROFILE_GENERIC: Final = "generic"
 PROFILE_VICTRON: Final = "victron"
@@ -49,4 +86,23 @@ MODES: Final = [
     MODE_NEUTRAL,
     MODE_TAPERING,
     MODE_NORMAL,
+]
+
+EV_MODE_UNAVAILABLE: Final = "unavailable"
+EV_MODE_INACTIVE: Final = "inactive"
+EV_MODE_DISCONNECTED: Final = "disconnected"
+EV_MODE_BLOCKED: Final = "blocked"
+EV_MODE_WAITING: Final = "waiting"
+EV_MODE_CHARGING: Final = "charging"
+EV_MODE_STOP_DELAY: Final = "stop_delay"
+EV_MODE_RESTART_BLOCKED: Final = "restart_blocked"
+EV_MODES: Final = [
+    EV_MODE_UNAVAILABLE,
+    EV_MODE_INACTIVE,
+    EV_MODE_DISCONNECTED,
+    EV_MODE_BLOCKED,
+    EV_MODE_WAITING,
+    EV_MODE_CHARGING,
+    EV_MODE_STOP_DELAY,
+    EV_MODE_RESTART_BLOCKED,
 ]

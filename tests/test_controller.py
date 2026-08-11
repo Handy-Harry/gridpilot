@@ -1,13 +1,24 @@
 """Tests for optional GridPilot battery actuation."""
 
-from homeassistant.const import ATTR_ENTITY_ID, UnitOfPower
+from homeassistant.const import ATTR_ENTITY_ID, UnitOfElectricCurrent, UnitOfPower
 from homeassistant.core import HomeAssistant, ServiceCall
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.gridpilot.const import (
+    CONF_BATTERY_CHARGE_POSITIVE,
+    CONF_BATTERY_POWER,
     CONF_BATTERY_SOC,
     CONF_CHARGE_SOC,
     CONF_ENABLE_ACTUATION,
+    CONF_ENABLE_EV_ACTUATION,
+    CONF_EV_CONNECTION_STATE,
+    CONF_EV_CURRENT_FEEDBACK,
+    CONF_EV_CURRENT_LIMIT,
+    CONF_EV_MODE,
+    CONF_EV_PHASE_MODE,
+    CONF_EV_POWER,
+    CONF_EV_VOLTAGE,
+    CONF_GRID_POWER,
     CONF_GRID_SETPOINT,
     CONF_HOME_LOAD,
     CONF_MAX_GRID_POWER,
@@ -17,20 +28,53 @@ from custom_components.gridpilot.const import (
 from custom_components.gridpilot.controller import GridPilotController
 
 
-def _entry(enable_actuation: bool) -> MockConfigEntry:
+def _entry(
+    enable_actuation: bool,
+    *,
+    configure_ev: bool = False,
+    enable_ev_actuation: bool = False,
+    partial_ev: bool = False,
+    battery_charge_positive: bool = True,
+    current_feedback: bool = False,
+) -> MockConfigEntry:
+    options = {
+        CONF_MAX_GRID_POWER: 2900,
+        CONF_CHARGE_SOC: 15,
+        CONF_MINIMUM_CHARGE_POWER: 300,
+        CONF_ENABLE_ACTUATION: enable_actuation,
+    }
+    if partial_ev:
+        options.update(
+            {
+                CONF_ENABLE_EV_ACTUATION: enable_ev_actuation,
+                CONF_EV_CURRENT_LIMIT: "number.ev_current",
+            }
+        )
+    elif configure_ev or enable_ev_actuation:
+        options.update(
+            {
+                CONF_BATTERY_CHARGE_POSITIVE: battery_charge_positive,
+                CONF_ENABLE_EV_ACTUATION: enable_ev_actuation,
+                CONF_GRID_POWER: "sensor.grid_power",
+                CONF_EV_POWER: "sensor.ev_power",
+                CONF_EV_CONNECTION_STATE: "sensor.ev_connection",
+                CONF_EV_CURRENT_LIMIT: "number.ev_current",
+                CONF_EV_VOLTAGE: "sensor.ev_voltage",
+                CONF_EV_PHASE_MODE: "select.ev_phases",
+                CONF_EV_MODE: "input_select.ev_mode",
+            }
+        )
+        if current_feedback:
+            options[CONF_EV_CURRENT_FEEDBACK] = "sensor.ev_current_feedback"
     return MockConfigEntry(
         domain=DOMAIN,
         data={
             CONF_BATTERY_SOC: "sensor.battery_soc",
+            CONF_BATTERY_POWER: "sensor.battery_power",
             CONF_HOME_LOAD: "sensor.home_load",
             CONF_GRID_SETPOINT: "number.grid_setpoint",
         },
-        options={
-            CONF_MAX_GRID_POWER: 2900,
-            CONF_CHARGE_SOC: 15,
-            CONF_MINIMUM_CHARGE_POWER: 300,
-            CONF_ENABLE_ACTUATION: enable_actuation,
-        },
+        options=options,
     )
 
 
@@ -43,6 +87,32 @@ def _set_valid_states(hass: HomeAssistant) -> None:
         "number.grid_setpoint",
         "0",
         {"min": -10000, "max": 10000, "unit_of_measurement": UnitOfPower.WATT},
+    )
+
+
+def _set_ev_states(hass: HomeAssistant, *, mode: str = "PV laden") -> None:
+    hass.states.async_set("sensor.battery_soc", "50")
+    hass.states.async_set(
+        "sensor.battery_power", "3680", {"unit_of_measurement": UnitOfPower.WATT}
+    )
+    hass.states.async_set(
+        "sensor.grid_power", "0", {"unit_of_measurement": UnitOfPower.WATT}
+    )
+    hass.states.async_set(
+        "sensor.ev_power", "0", {"unit_of_measurement": UnitOfPower.WATT}
+    )
+    hass.states.async_set("sensor.ev_connection", "Connected")
+    hass.states.async_set("sensor.ev_voltage", "230", {"unit_of_measurement": "V"})
+    hass.states.async_set("select.ev_phases", "1 Phase")
+    hass.states.async_set("input_select.ev_mode", mode)
+    hass.states.async_set(
+        "number.ev_current",
+        "5",
+        {
+            "min": 0,
+            "max": 32,
+            "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
+        },
     )
 
 
@@ -152,3 +222,224 @@ async def test_failed_neutral_reset_disarms_controller(
     assert len(calls) == 1
     assert calls[0].data["value"] == 0
     assert controller.actuation_healthy
+
+
+async def test_ev_shadow_mode_calculates_without_writing(hass: HomeAssistant) -> None:
+    _set_valid_states(hass)
+    entry = _entry(False, configure_ev=True)
+    _set_ev_states(hass)
+    calls: list[ServiceCall] = []
+    hass.services.async_register("number", "set_value", calls.append)
+
+    controller = GridPilotController(hass, entry)
+    await controller.async_refresh()
+
+    assert controller.ev_decision.valid
+    assert controller.ev_decision.requested_current == 6
+    assert calls == []
+
+
+async def test_ev_actuation_writes_only_in_pv_mode(hass: HomeAssistant) -> None:
+    _set_valid_states(hass)
+    _set_ev_states(hass, mode="Manueel")
+    calls: list[ServiceCall] = []
+    hass.services.async_register("number", "set_value", calls.append)
+
+    controller = GridPilotController(hass, _entry(False, enable_ev_actuation=True))
+    await controller.async_refresh()
+
+    assert controller.ev_decision.requested_current is None
+    assert calls == []
+
+
+async def test_ev_actuation_starts_at_six_amps(hass: HomeAssistant) -> None:
+    _set_valid_states(hass)
+    _set_ev_states(hass)
+    calls: list[ServiceCall] = []
+    hass.services.async_register("number", "set_value", calls.append)
+
+    controller = GridPilotController(hass, _entry(False, enable_ev_actuation=True))
+    await controller.async_refresh()
+
+    assert len(calls) == 1
+    assert calls[0].data == {
+        ATTR_ENTITY_ID: "number.ev_current",
+        "value": 6,
+    }
+
+
+async def test_ev_actuation_rejects_actuator_without_safe_pause(
+    hass: HomeAssistant,
+) -> None:
+    _set_valid_states(hass)
+    _set_ev_states(hass)
+    hass.states.async_set(
+        "number.ev_current",
+        "6",
+        {
+            "min": 6,
+            "max": 32,
+            "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
+        },
+    )
+    calls: list[ServiceCall] = []
+    hass.services.async_register("number", "set_value", calls.append)
+
+    controller = GridPilotController(hass, _entry(False, enable_ev_actuation=True))
+    await controller.async_refresh()
+
+    assert not controller.ev_decision.valid
+    assert "safe 5 A pause" in controller.ev_decision.reason
+    assert controller.last_ev_actuation_error is not None
+    assert calls == []
+
+
+async def test_incomplete_active_ev_config_applies_safe_pause(
+    hass: HomeAssistant,
+) -> None:
+    _set_valid_states(hass)
+    hass.states.async_set(
+        "number.ev_current",
+        "10",
+        {
+            "min": 0,
+            "max": 32,
+            "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
+        },
+    )
+    calls: list[ServiceCall] = []
+    hass.services.async_register("number", "set_value", calls.append)
+
+    controller = GridPilotController(
+        hass,
+        _entry(False, enable_ev_actuation=True, partial_ev=True),
+    )
+    await controller.async_refresh()
+
+    assert not controller.ev_decision.valid
+    assert calls[0].data == {
+        ATTR_ENTITY_ID: "number.ev_current",
+        "value": 5,
+    }
+
+
+async def test_ev_shutdown_uses_original_actuator_after_options_change(
+    hass: HomeAssistant,
+) -> None:
+    _set_valid_states(hass)
+    _set_ev_states(hass)
+    hass.states.async_set(
+        "number.ev_current",
+        "8",
+        {
+            "min": 0,
+            "max": 32,
+            "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
+        },
+    )
+    hass.states.async_set(
+        "number.new_ev_current",
+        "9",
+        {
+            "min": 0,
+            "max": 32,
+            "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
+        },
+    )
+    calls: list[ServiceCall] = []
+    hass.services.async_register("number", "set_value", calls.append)
+    entry = _entry(False, enable_ev_actuation=True)
+    entry.add_to_hass(hass)
+    controller = GridPilotController(hass, entry)
+    hass.config_entries.async_update_entry(
+        entry,
+        options={**entry.options, CONF_EV_CURRENT_LIMIT: "number.new_ev_current"},
+    )
+
+    assert await controller.async_shutdown()
+    assert calls[0].data == {
+        ATTR_ENTITY_ID: "number.ev_current",
+        "value": 5,
+    }
+
+
+async def test_ev_current_feedback_drives_ramping(hass: HomeAssistant) -> None:
+    _set_valid_states(hass)
+    _set_ev_states(hass)
+    hass.states.async_set(
+        "sensor.ev_current_feedback",
+        "8",
+        {"unit_of_measurement": UnitOfElectricCurrent.AMPERE},
+    )
+    controller = GridPilotController(
+        hass,
+        _entry(False, configure_ev=True, current_feedback=True),
+    )
+
+    await controller.async_refresh()
+
+    assert controller.ev_decision.valid
+    assert controller.ev_decision.requested_current == 8
+
+
+async def test_ev_readback_above_configured_maximum_is_clamped(
+    hass: HomeAssistant,
+) -> None:
+    _set_valid_states(hass)
+    _set_ev_states(hass)
+    hass.states.async_set(
+        "sensor.ev_current_feedback",
+        "20",
+        {"unit_of_measurement": UnitOfElectricCurrent.AMPERE},
+    )
+    controller = GridPilotController(
+        hass,
+        _entry(False, configure_ev=True, current_feedback=True),
+    )
+
+    await controller.async_refresh()
+
+    assert controller.ev_decision.valid
+    assert controller.ev_decision.requested_current == 16
+
+
+async def test_ev_current_feedback_requires_amperes(hass: HomeAssistant) -> None:
+    _set_valid_states(hass)
+    _set_ev_states(hass)
+    hass.states.async_set(
+        "sensor.ev_current_feedback",
+        "8000",
+        {"unit_of_measurement": "mA"},
+    )
+    controller = GridPilotController(
+        hass,
+        _entry(False, configure_ev=True, current_feedback=True),
+    )
+
+    await controller.async_refresh()
+
+    assert not controller.ev_decision.valid
+    assert "not measured in A" in controller.ev_decision.reason
+
+
+async def test_negative_battery_charge_polarity_is_normalized(
+    hass: HomeAssistant,
+) -> None:
+    _set_valid_states(hass)
+    _set_ev_states(hass)
+    hass.states.async_set(
+        "sensor.battery_power", "-3680", {"unit_of_measurement": UnitOfPower.WATT}
+    )
+    controller = GridPilotController(
+        hass,
+        _entry(
+            False,
+            configure_ev=True,
+            battery_charge_positive=False,
+        ),
+    )
+
+    await controller.async_refresh()
+
+    assert controller.ev_decision.valid
+    assert controller.ev_decision.requested_current == 6

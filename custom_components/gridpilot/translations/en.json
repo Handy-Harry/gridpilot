@@ -42,6 +42,46 @@
           "home_load_l3": "Instantaneous home consumption on phase L3 in W or kW. Complete L1, L2 and L3 when no total home-load sensor is selected."
         }
       },
+      "ev": {
+        "title": "Configure PV surplus and EV charging",
+        "description": "Entity mappings are optional. GridPilot only calculates EV current after all required mappings are configured, and never writes unless EV actuation is explicitly enabled.",
+        "data": {
+          "grid_power": "Grid power",
+          "ev_power": "EV charging power",
+          "ev_connection_state": "EV connection state",
+          "ev_current_limit": "Writable EV current limit",
+          "ev_current_feedback": "Applied EV current limit (optional)",
+          "ev_voltage": "EV phase voltage",
+          "ev_phase_mode": "EV phase mode",
+          "ev_mode": "Charging mode",
+          "ev_override": "Battery-to-EV override (optional)",
+          "battery_charge_positive": "Positive battery power means charging",
+          "ev_pv_mode": "PV charging mode value",
+          "ev_disconnected_state": "Disconnected state value",
+          "ev_priority": "PV priority for EV",
+          "ev_max_current": "Maximum EV current",
+          "pv_safety_margin": "PV safety margin",
+          "enable_ev_actuation": "Enable active EV current control"
+        },
+        "data_description": {
+          "grid_power": "Grid power in W or kW, positive for import and negative for export.",
+          "ev_power": "Current EV charging power in W or kW.",
+          "ev_connection_state": "Entity whose state indicates whether an EV is connected.",
+          "ev_current_limit": "Writable number entity in A. Alfen Modbus example: number.alfen_max_current_limit_s1.",
+          "ev_current_feedback": "Optional sensor or number reporting the applied current limit.",
+          "ev_voltage": "Phase-to-neutral voltage used to convert available power to current.",
+          "ev_phase_mode": "Select or sensor whose state starts with 1 or 3.",
+          "ev_mode": "Select entity used to choose the charging mode.",
+          "ev_override": "When on, GridPilot relinquishes EV current control to the battery-to-EV controller.",
+          "battery_charge_positive": "Enable when positive battery power means charging; disable when negative battery power means charging.",
+          "ev_pv_mode": "Exact charging-mode state in which GridPilot may control PV charging.",
+          "ev_disconnected_state": "Exact connection-state value meaning no EV is connected.",
+          "ev_priority": "Share of available PV assigned to the EV while the home battery is below 98%.",
+          "ev_max_current": "Maximum current GridPilot may request. Default: 16 A.",
+          "pv_safety_margin": "Power withheld from EV charging to reduce accidental grid import.",
+          "enable_ev_actuation": "Danger: enable only after every other PV controller writing to the EV current limit has been disabled. Default: off."
+        }
+      },
       "control": {
         "title": "Configure control parameters",
         "description": "These values are stored inside GridPilot's Home Assistant config entry. No helpers are created.",
@@ -62,7 +102,9 @@
     "error": {
       "load_entities_required": "Select one total load sensor or all three phase sensors"
     },
-    "abort": {"already_configured": "GridPilot is already configured"}
+    "abort": {
+      "already_configured": "GridPilot is already configured"
+    }
   },
   "options": {
     "step": {
@@ -81,12 +123,55 @@
           "minimum_charge_power": "Minimum extra charging power requested below the charge threshold, before applying the maximum grid-power limit. Default: 300 W.",
           "enable_actuation": "Danger: enable only after every other controller writing to the grid setpoint has been disabled. Invalid measurements and unloads reset the setpoint to 0 W. Default: off."
         }
+      },
+      "ev": {
+        "title": "Configure PV surplus and EV charging",
+        "description": "GridPilot acts only in the configured PV mode. Manual and battery-to-EV charging remain outside GridPilot v0.3.",
+        "data": {
+          "grid_power": "Grid power",
+          "ev_power": "EV charging power",
+          "ev_connection_state": "EV connection state",
+          "ev_current_limit": "Writable EV current limit",
+          "ev_current_feedback": "Applied EV current limit (optional)",
+          "ev_voltage": "EV phase voltage",
+          "ev_phase_mode": "EV phase mode",
+          "ev_mode": "Charging mode",
+          "ev_override": "Battery-to-EV override (optional)",
+          "battery_charge_positive": "Positive battery power means charging",
+          "ev_pv_mode": "PV charging mode value",
+          "ev_disconnected_state": "Disconnected state value",
+          "ev_priority": "PV priority for EV",
+          "ev_max_current": "Maximum EV current",
+          "pv_safety_margin": "PV safety margin",
+          "enable_ev_actuation": "Enable active EV current control"
+        },
+        "data_description": {
+          "grid_power": "Grid power in W or kW, positive for import and negative for export.",
+          "ev_power": "Current EV charging power in W or kW.",
+          "ev_connection_state": "Entity whose state indicates whether an EV is connected.",
+          "ev_current_limit": "Writable number entity in A. Alfen Modbus example: number.alfen_max_current_limit_s1.",
+          "ev_current_feedback": "Optional sensor or number reporting the applied current limit.",
+          "ev_voltage": "Phase-to-neutral voltage used to convert available power to current.",
+          "ev_phase_mode": "Select or sensor whose state starts with 1 or 3.",
+          "ev_mode": "Select entity used to choose the charging mode.",
+          "ev_override": "When on, GridPilot relinquishes EV current control to the battery-to-EV controller.",
+          "battery_charge_positive": "Enable when positive battery power means charging; disable when negative battery power means charging.",
+          "ev_pv_mode": "Exact charging-mode state in which GridPilot may control PV charging.",
+          "ev_disconnected_state": "Exact connection-state value meaning no EV is connected.",
+          "ev_priority": "Share of available PV assigned to the EV while the home battery is below 98%.",
+          "ev_max_current": "Maximum current GridPilot may request. Default: 16 A.",
+          "pv_safety_margin": "Power withheld from EV charging to reduce accidental grid import.",
+          "enable_ev_actuation": "Danger: enable only after every other PV controller writing to the EV current limit has been disabled. Default: off."
+        }
       }
     }
   },
   "selector": {
     "profile": {
-      "options": {"generic": "Generic", "victron": "Victron-oriented"}
+      "options": {
+        "generic": "Generic",
+        "victron": "Victron-oriented"
+      }
     }
   },
   "entity": {
@@ -103,12 +188,31 @@
           "normal": "Normal"
         }
       },
-      "control_reason": {"name": "Control reason"}
+      "control_reason": {"name": "Control reason"},
+      "available_pv_power": {"name": "Available PV power"},
+      "ev_target_current": {"name": "EV target current"},
+      "ev_operating_mode": {
+        "name": "EV operating mode",
+        "state": {
+          "unavailable": "Unavailable",
+          "inactive": "Inactive",
+          "disconnected": "Disconnected",
+          "blocked": "Blocked",
+          "waiting": "Waiting",
+          "charging": "Charging",
+          "stop_delay": "Stop delay",
+          "restart_blocked": "Restart blocked"
+        }
+      },
+      "ev_control_reason": {"name": "EV control reason"}
     },
     "binary_sensor": {
       "measurements_valid": {"name": "Measurements valid"},
       "shadow_mode": {"name": "Shadow mode"},
-      "actuation_healthy": {"name": "Actuation healthy"}
+      "actuation_healthy": {"name": "Actuation healthy"},
+      "ev_measurements_valid": {"name": "EV measurements valid"},
+      "ev_shadow_mode": {"name": "EV shadow mode"},
+      "ev_actuation_healthy": {"name": "EV actuation healthy"}
     }
   }
 }
