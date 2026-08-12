@@ -91,7 +91,7 @@ def _entry(
         if configure_battery_to_ev:
             options.update(
                 {
-                    CONF_EV_BATTERY_MODE: "Thuisbatterij naar auto",
+                    CONF_EV_BATTERY_MODE: "Thuisbatterij naar EV",
                     CONF_EV_BATTERY_SOC: "sensor.secondary_battery_soc",
                     CONF_EV_BATTERY_MIN_SOC: "input_number.minimum_battery_soc",
                     CONF_EV_BATTERY_TIME_TO_GO: "sensor.battery_time_to_go",
@@ -416,7 +416,7 @@ async def test_battery_to_ev_toggle_is_explicit_when_mode_is_not_pv_or_manual(
     hass: HomeAssistant,
 ) -> None:
     _set_valid_states(hass)
-    _set_ev_states(hass, mode="Thuisbatterij naar auto")
+    _set_ev_states(hass, mode="Thuisbatterij naar EV")
     _set_battery_to_ev_states(hass)
     controller = GridPilotController(
         hass,
@@ -489,7 +489,7 @@ async def test_battery_to_ev_handoff_starts_at_six_amps(
 
     await controller.async_refresh()
     hass.states.async_set("input_boolean.battery_to_ev", "on")
-    hass.states.async_set("input_select.ev_mode", "Thuisbatterij naar auto")
+    hass.states.async_set("input_select.ev_mode", "Thuisbatterij naar EV")
     await controller.async_refresh()
 
     assert controller.ev_decision.strategy == "battery_to_ev"
@@ -500,7 +500,7 @@ async def test_battery_to_ev_handoff_to_pv_does_not_use_stop_delay(
     hass: HomeAssistant,
 ) -> None:
     _set_valid_states(hass)
-    _set_ev_states(hass, mode="Thuisbatterij naar auto")
+    _set_ev_states(hass, mode="Thuisbatterij naar EV")
     _set_battery_to_ev_states(hass)
     controller = GridPilotController(
         hass,
@@ -533,7 +533,7 @@ async def test_battery_reserve_pause_bypasses_ev_rate_limit(
     hass: HomeAssistant,
 ) -> None:
     _set_valid_states(hass)
-    _set_ev_states(hass, mode="Thuisbatterij naar auto")
+    _set_ev_states(hass, mode="Thuisbatterij naar EV")
     _set_battery_to_ev_states(hass)
     calls: list[ServiceCall] = []
     hass.services.async_register("number", "set_value", calls.append)

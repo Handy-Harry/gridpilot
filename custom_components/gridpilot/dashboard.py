@@ -334,6 +334,7 @@ def _ev_cards(
             {
                 "type": "markdown",
                 "content": _ev_markdown(
+                    options[CONF_EV_MODE],
                     strategy,
                     operating_mode,
                     reason,
@@ -362,6 +363,25 @@ def _control_markdown(
 {% set calculated = states('CALCULATED') | float(0) %}
 {% set actual = states('ACTUAL') | float(0) %}
 {% set difference = actual - calculated %}
+{% set mode_labels = {
+  'unavailable': 'Niet beschikbaar',
+  'max_charging': 'Maximaal bijladen',
+  'charging': 'Bijladen',
+  'neutral': 'Neutraal',
+  'tapering': 'Afbouwen',
+  'normal': 'Normaal'
+} %}
+{% set reason_labels = {
+  'SOC is at or above the normal threshold':
+    'De SOC ligt op of boven de grens voor normale werking',
+  'Grid compensation tapers linearly toward zero':
+    'De netcompensatie wordt geleidelijk tot nul afgebouwd',
+  'Grid setpoint compensates the home load':
+    'Het netsetpoint compenseert het huisverbruik',
+  'SOC is at or below the minimum threshold': 'De SOC ligt op of onder de minimumgrens',
+  'Charge power rises as SOC approaches the minimum threshold':
+    'Het laadvermogen stijgt wanneer de SOC de minimumgrens nadert'
+} %}
 {% if is_state('VALID', 'on') %}
 GridPilot verwerkt geldige meetwaarden.
 {% else %}
@@ -369,13 +389,13 @@ GridPilot verwerkt geldige meetwaarden.
 {% endif %}
 
 - **Werkmodus:**
-  {% if is_state('SHADOW', 'on') %}Shadow mode{% else %}Actieve aansturing{% endif %}
+  {% if is_state('SHADOW', 'on') %}Schaduwmodus{% else %}Actieve aansturing{% endif %}
 - **Aansturing:** {% if is_state('HEALTHY', 'on') %}gezond{% else %}storing{% endif %}
 - **Berekend setpoint:** {{ calculated | round(0) }} W
 - **Actief setpoint:** {{ actual | round(0) }} W
 - **Verschil:** {{ difference | round(0) }} W
-- **Modus:** {{ states('MODE') }}
-- **Reden:** {{ states('REASON') }}
+- **Modus:** {{ mode_labels.get(states('MODE'), states('MODE')) }}
+- **Reden:** {{ reason_labels.get(states('REASON'), states('REASON')) }}
 """.replace("CALCULATED", calculated).replace("ACTUAL", actual).replace(
         "VALID", valid
     ).replace("SHADOW", shadow).replace("HEALTHY", healthy).replace(
@@ -384,6 +404,7 @@ GridPilot verwerkt geldige meetwaarden.
 
 
 def _ev_markdown(
+    selected_mode: str,
     strategy: str,
     mode: str,
     reason: str,
@@ -401,19 +422,71 @@ def _ev_markdown(
     return (
         """### Laadregeling
 {% set selected = states('STRATEGY') %}
-{% if selected == 'none' %}
+{% set selected_mode = states('SELECTED_MODE') %}
+{% set strategy_labels = {
+  'none': 'Uit',
+  'pv': 'PV laden',
+  'manual': 'Manueel',
+  'battery_to_ev': 'Thuisbatterij naar EV'
+} %}
+{% set mode_labels = {
+  'unavailable': 'Niet beschikbaar',
+  'inactive': 'Inactief',
+  'disconnected': 'Niet verbonden',
+  'blocked': 'Geblokkeerd',
+  'waiting': 'Wachten',
+  'charging': 'Laden',
+  'stop_delay': 'Stopvertraging',
+  'restart_blocked': 'Herstart geblokkeerd'
+} %}
+{% set reason_labels = {
+  'No GridPilot EV charging strategy is selected':
+    'Er is geen GridPilot-laadstrategie geselecteerd',
+  'EV is not connected': 'De EV is niet verbonden',
+  'Battery grid charging blocks PV EV charging':
+    'Laden via het net blokkeert PV-laden van de EV',
+  'Available PV power supports EV charging':
+    'Het beschikbare PV-vermogen volstaat om de EV te laden',
+  'Available PV power is below the minimum charging current':
+    'Het beschikbare PV-vermogen ligt onder de minimale laadstroom',
+  'EV current follows the manual charging setting':
+    'De EV-stroom volgt de handmatig ingestelde laadstroom',
+  'Battery reserve SOC pauses battery-to-EV charging':
+    'De batterijreserve onderbreekt laden van thuisbatterij naar EV',
+  'Battery-to-EV charging started': 'Laden van thuisbatterij naar EV is gestart',
+  'Grid import reduces battery-to-EV current':
+    'Netafname verlaagt de laadstroom van thuisbatterij naar EV',
+  'Battery reserve allows more EV current':
+    'De batterijreserve laat een hogere EV-stroom toe',
+  'Battery reserve requires less EV current':
+    'De batterijreserve vereist een lagere EV-stroom',
+  'Battery-to-EV current is within the target tolerance':
+    'De laadstroom van thuisbatterij naar EV ligt binnen de doelmarge',
+  'EV restart delay is active': 'De EV-herstartvertraging is actief',
+  'PV charging started': 'PV-laden is gestart',
+  'Waiting for sufficient PV power': 'Wachten op voldoende PV-vermogen',
+  'PV stop delay elapsed': 'De PV-stopvertraging is verstreken',
+  'Temporary PV shortage is buffered': 'Een tijdelijk PV-tekort wordt opgevangen',
+  'EV current follows available PV power':
+    'De EV-stroom volgt het beschikbare PV-vermogen'
+} %}
+{% if selected_mode == 'Uit' %}
 De laadregeling is uit.
+{% elif selected_mode == 'Automatisch' and selected == 'none' %}
+De gekozen modus is **Automatisch**.
+Hiervoor is nog geen aparte GridPilot-regelstrategie actief.
 {% else %}
-GridPilot gebruikt strategie **{{ selected }}**.
+GridPilot gebruikt **{{ strategy_labels.get(selected, selected_mode) }}**.
 {% endif %}
 
-- **Bedrijfsmodus:** {{ states('MODE') }}
+- **Bedrijfsmodus:** {{ mode_labels.get(states('MODE'), states('MODE')) }}
 - **Doelstroom:** {{ states('TARGET') }} A
 CURRENT_LINE- **Meetwaarden:**
   {% if is_state('VALID', 'on') %}geldig{% else %}ongeldig{% endif %}
 - **Aansturing:** {% if is_state('HEALTHY', 'on') %}gezond{% else %}storing{% endif %}
-- **Reden:** {{ states('REASON') }}
-""".replace("STRATEGY", strategy)
+- **Reden:** {{ reason_labels.get(states('REASON'), states('REASON')) }}
+""".replace("SELECTED_MODE", selected_mode)
+        .replace("STRATEGY", strategy)
         .replace("MODE", mode)
         .replace("TARGET", target)
         .replace("CURRENT_LINE", current_line)

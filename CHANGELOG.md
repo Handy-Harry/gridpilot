@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.2 - 2026-08-12
+
+- Rename the EV charging mode label to `Thuisbatterij naar EV` and use `Automatisch` in the dashboard selector.
+- Translate dashboard strategy, operating-mode and control-reason labels for Dutch users.
+- Replace remaining English entity-type terms in the Dutch configuration descriptions.
+
 ## 1.1.1 - 2026-08-12
 
 - Add correctly sized local 1x and 2x GridPilot icon and logo assets.

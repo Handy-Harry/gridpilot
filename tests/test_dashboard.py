@@ -137,6 +137,12 @@ def test_dashboard_uses_configured_entities() -> None:
     assert "select.ev_phases" in rendered
     assert "input_number.minimum_soc" in rendered
     assert "Thuisbatterij ontladen tot" in rendered
+    assert "Schaduwmodus" in rendered
+    assert "Thuisbatterij naar EV" in rendered
+    assert "strategy_labels" in rendered
+    assert "Automatisch" in rendered
+    assert "PV-laden is gestart" in rendered
+    assert "De netcompensatie wordt geleidelijk tot nul afgebouwd" in rendered
     ev_cards = config["views"][0]["sections"][1]["cards"]
     assert ev_cards[0]["heading"] == "EV laden"
     assert ev_cards[1]["type"] == "custom:gridpilot-card"

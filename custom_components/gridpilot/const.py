@@ -5,7 +5,7 @@ from typing import Final
 
 DOMAIN: Final = "gridpilot"
 NAME: Final = "GridPilot"
-VERSION: Final = "1.1.1"
+VERSION: Final = "1.1.2"
 
 PLATFORMS: Final = ["sensor", "binary_sensor", "number"]
 UPDATE_INTERVAL: Final = timedelta(minutes=1)
@@ -65,7 +65,7 @@ DEFAULT_ENABLE_EV_ACTUATION: Final = False
 DEFAULT_BATTERY_CHARGE_POSITIVE: Final = True
 DEFAULT_EV_PV_MODE: Final = "PV laden"
 DEFAULT_EV_MANUAL_MODE: Final = "Manueel"
-DEFAULT_EV_BATTERY_MODE: Final = "Thuisbatterij naar auto"
+DEFAULT_EV_BATTERY_MODE: Final = "Thuisbatterij naar EV"
 DEFAULT_EV_DISCONNECTED_STATE: Final = "Available"
 DEFAULT_EV_PRIORITY: Final = 50.0
 DEFAULT_EV_MAX_CURRENT: Final = 16.0
