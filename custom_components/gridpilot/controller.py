@@ -31,6 +31,7 @@ from .const import (
     CONF_ENABLE_ACTUATION,
     CONF_ENABLE_EV_ACTUATION,
     CONF_EV_BATTERY_MIN_SOC,
+    CONF_EV_BATTERY_MODE,
     CONF_EV_BATTERY_SOC,
     CONF_EV_BATTERY_TARGET_TIME,
     CONF_EV_BATTERY_TIME_TO_GO,
@@ -42,7 +43,6 @@ from .const import (
     CONF_EV_MANUAL_MODE,
     CONF_EV_MAX_CURRENT,
     CONF_EV_MODE,
-    CONF_EV_OVERRIDE,
     CONF_EV_PHASE_MODE,
     CONF_EV_POWER,
     CONF_EV_PRIORITY,
@@ -179,7 +179,6 @@ class GridPilotController:
                 CONF_EV_VOLTAGE,
                 CONF_EV_PHASE_MODE,
                 CONF_EV_MODE,
-                CONF_EV_OVERRIDE,
                 CONF_EV_MANUAL_CURRENT,
                 CONF_EV_BATTERY_SOC,
                 CONF_EV_BATTERY_MIN_SOC,
@@ -348,18 +347,10 @@ class GridPilotController:
             strategy = self._selected_ev_strategy(options)
             if strategy == EV_STRATEGY_NONE:
                 self._clear_ev_samples()
-                override = options.get(CONF_EV_OVERRIDE)
-                external_override = bool(
-                    override and self._state(str(override)) == "on"
-                )
                 self.ev_decision = EVControlDecision(
                     valid=True,
                     mode=EV_MODE_INACTIVE,
-                    reason=(
-                        "External battery-to-EV override remains active"
-                        if external_override
-                        else "No GridPilot EV charging strategy is selected"
-                    ),
+                    reason="No GridPilot EV charging strategy is selected",
                 )
                 return
 
@@ -453,7 +444,9 @@ class GridPilotController:
         if mode == str(options.get(CONF_EV_MANUAL_MODE, DEFAULT_EV_MANUAL_MODE)):
             return EV_STRATEGY_MANUAL
 
-        if mode == DEFAULT_EV_BATTERY_MODE:
+        if mode == str(
+            options.get(CONF_EV_BATTERY_MODE, DEFAULT_EV_BATTERY_MODE)
+        ):
             battery_options = {
                 CONF_GRID_POWER,
                 CONF_EV_BATTERY_SOC,

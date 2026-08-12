@@ -54,7 +54,6 @@
           "ev_voltage": "EV phase voltage",
           "ev_phase_mode": "EV phase mode",
           "ev_mode": "Charging mode",
-          "ev_override": "Battery-to-EV enabled (optional)",
           "ev_manual_current": "Manual EV current (optional)",
           "ev_battery_soc": "Secondary battery SOC (optional)",
           "ev_battery_min_soc": "Battery-to-EV minimum SOC (optional)",
@@ -63,6 +62,7 @@
           "battery_charge_positive": "Positive battery power means charging",
           "ev_pv_mode": "PV charging mode value",
           "ev_manual_mode": "Manual charging mode value",
+          "ev_battery_mode": "Battery-to-EV charging mode value",
           "ev_disconnected_state": "Disconnected state value",
           "ev_priority": "PV priority for EV",
           "ev_max_current": "Maximum EV current",
@@ -78,7 +78,6 @@
           "ev_voltage": "Phase-to-neutral voltage used to convert available power to current.",
           "ev_phase_mode": "Select or sensor whose state starts with 1 or 3.",
           "ev_mode": "Select entity used to choose the charging mode.",
-          "ev_override": "When on, GridPilot selects battery-to-EV with priority over manual and PV charging.",
           "ev_manual_current": "Number or input number in A containing the current for manual charging.",
           "ev_battery_soc": "Secondary battery SOC sensor used together with the primary battery SOC as a reserve safeguard.",
           "ev_battery_min_soc": "Number or input number containing the battery reserve SOC.",
@@ -87,6 +86,7 @@
           "battery_charge_positive": "Enable when positive battery power means charging; disable when negative battery power means charging.",
           "ev_pv_mode": "Exact charging-mode state in which GridPilot may control PV charging.",
           "ev_manual_mode": "Exact charging-mode state in which GridPilot follows the manual-current helper.",
+          "ev_battery_mode": "Exact charging-mode state in which GridPilot may discharge the home battery into the EV.",
           "ev_disconnected_state": "Exact connection-state value meaning no EV is connected.",
           "ev_priority": "Share of available PV assigned to the EV while the home battery is below 98%.",
           "ev_max_current": "Maximum current GridPilot may request. Default: 16 A.",
@@ -139,7 +139,7 @@
       },
       "ev": {
         "title": "Configure PV surplus and EV charging",
-        "description": "GridPilot coordinates PV, manual and battery-to-EV charging. Battery-to-EV has priority while its enable entity is on.",
+        "description": "GridPilot coordinates PV, manual and battery-to-EV charging. The configured charging-mode select is authoritative.",
         "data": {
           "grid_power": "Grid power",
           "ev_power": "EV charging power",
@@ -149,7 +149,6 @@
           "ev_voltage": "EV phase voltage",
           "ev_phase_mode": "EV phase mode",
           "ev_mode": "Charging mode",
-          "ev_override": "Battery-to-EV enabled (optional)",
           "ev_manual_current": "Manual EV current (optional)",
           "ev_battery_soc": "Secondary battery SOC (optional)",
           "ev_battery_min_soc": "Battery-to-EV minimum SOC (optional)",
@@ -158,6 +157,7 @@
           "battery_charge_positive": "Positive battery power means charging",
           "ev_pv_mode": "PV charging mode value",
           "ev_manual_mode": "Manual charging mode value",
+          "ev_battery_mode": "Battery-to-EV charging mode value",
           "ev_disconnected_state": "Disconnected state value",
           "ev_priority": "PV priority for EV",
           "ev_max_current": "Maximum EV current",
@@ -173,7 +173,6 @@
           "ev_voltage": "Phase-to-neutral voltage used to convert available power to current.",
           "ev_phase_mode": "Select or sensor whose state starts with 1 or 3.",
           "ev_mode": "Select entity used to choose the charging mode.",
-          "ev_override": "When on, GridPilot selects battery-to-EV with priority over manual and PV charging.",
           "ev_manual_current": "Number or input number in A containing the current for manual charging.",
           "ev_battery_soc": "Secondary battery SOC sensor used together with the primary battery SOC as a reserve safeguard.",
           "ev_battery_min_soc": "Number or input number containing the battery reserve SOC.",
@@ -182,6 +181,7 @@
           "battery_charge_positive": "Enable when positive battery power means charging; disable when negative battery power means charging.",
           "ev_pv_mode": "Exact charging-mode state in which GridPilot may control PV charging.",
           "ev_manual_mode": "Exact charging-mode state in which GridPilot follows the manual-current helper.",
+          "ev_battery_mode": "Exact charging-mode state in which GridPilot may discharge the home battery into the EV.",
           "ev_disconnected_state": "Exact connection-state value meaning no EV is connected.",
           "ev_priority": "Share of available PV assigned to the EV while the home battery is below 98%.",
           "ev_max_current": "Maximum current GridPilot may request. Default: 16 A.",
@@ -191,7 +191,7 @@
       }
     },
     "error": {
-      "mode_values_must_differ": "PV and manual charging mode values must differ"
+      "mode_values_must_differ": "PV, manual and battery-to-EV charging mode values must differ"
     }
   },
   "selector": {

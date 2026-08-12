@@ -17,6 +17,7 @@ from custom_components.gridpilot.const import (
     CONF_ENABLE_ACTUATION,
     CONF_ENABLE_EV_ACTUATION,
     CONF_EV_BATTERY_MIN_SOC,
+    CONF_EV_BATTERY_MODE,
     CONF_EV_BATTERY_SOC,
     CONF_EV_BATTERY_TARGET_TIME,
     CONF_EV_BATTERY_TIME_TO_GO,
@@ -25,7 +26,6 @@ from custom_components.gridpilot.const import (
     CONF_EV_CURRENT_LIMIT,
     CONF_EV_MANUAL_CURRENT,
     CONF_EV_MODE,
-    CONF_EV_OVERRIDE,
     CONF_EV_PHASE_MODE,
     CONF_EV_POWER,
     CONF_EV_PV_MODE,
@@ -91,7 +91,7 @@ def _entry(
         if configure_battery_to_ev:
             options.update(
                 {
-                    CONF_EV_OVERRIDE: "input_boolean.battery_to_ev",
+                    CONF_EV_BATTERY_MODE: "Thuisbatterij naar auto",
                     CONF_EV_BATTERY_SOC: "sensor.secondary_battery_soc",
                     CONF_EV_BATTERY_MIN_SOC: "input_number.minimum_battery_soc",
                     CONF_EV_BATTERY_TIME_TO_GO: "sensor.battery_time_to_go",

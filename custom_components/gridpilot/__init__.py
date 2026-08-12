@@ -10,11 +10,14 @@ from homeassistant.helpers import config_validation as cv
 from .calculations import normalize_power
 from .const import (
     CONF_CHARGE_SOC,
+    CONF_EV_BATTERY_MODE,
+    CONF_EV_OVERRIDE,
     CONF_MAX_GRID_POWER,
     CONF_MINIMUM_CHARGE_POWER,
     CONF_MINIMUM_SOC,
     CONF_NORMAL_SOC,
     DEFAULT_CHARGE_SOC,
+    DEFAULT_EV_BATTERY_MODE,
     DEFAULT_MINIMUM_CHARGE_POWER,
     VERSION,
 )
@@ -77,7 +80,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) ->
 
 async def async_migrate_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) -> bool:
     """Migrate legacy control parameters and SOC thresholds."""
-    if entry.version > 5:
+    if entry.version > 6:
         return False
 
     data = dict(entry.data)
@@ -117,6 +120,11 @@ async def async_migrate_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) 
 
     if version == 4:
         version = 5
+
+    if version == 5:
+        options.pop(CONF_EV_OVERRIDE, None)
+        options.setdefault(CONF_EV_BATTERY_MODE, DEFAULT_EV_BATTERY_MODE)
+        version = 6
 
     if version != entry.version or data != entry.data or options != entry.options:
         hass.config_entries.async_update_entry(

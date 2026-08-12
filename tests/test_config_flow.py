@@ -12,6 +12,7 @@ from custom_components.gridpilot.const import (
     CONF_CHARGE_SOC,
     CONF_ENABLE_ACTUATION,
     CONF_ENABLE_EV_ACTUATION,
+    CONF_EV_BATTERY_MODE,
     CONF_EV_DISCONNECTED_STATE,
     CONF_EV_MANUAL_MODE,
     CONF_EV_MAX_CURRENT,
@@ -25,6 +26,7 @@ from custom_components.gridpilot.const import (
     CONF_PV_SAFETY_MARGIN,
     DEFAULT_BATTERY_CHARGE_POSITIVE,
     DEFAULT_ENABLE_EV_ACTUATION,
+    DEFAULT_EV_BATTERY_MODE,
     DEFAULT_EV_DISCONNECTED_STATE,
     DEFAULT_EV_MANUAL_MODE,
     DEFAULT_EV_MAX_CURRENT,
@@ -208,7 +210,7 @@ async def test_options_flow_rejects_identical_ev_mode_values(
     )
 
     assert result["type"] is FlowResultType.FORM
-    assert result["errors"] == {CONF_EV_MANUAL_MODE: "mode_values_must_differ"}
+    assert result["errors"] == {CONF_EV_BATTERY_MODE: "mode_values_must_differ"}
 
 
 def _default_ev_options() -> dict[str, object]:
@@ -216,6 +218,7 @@ def _default_ev_options() -> dict[str, object]:
         CONF_BATTERY_CHARGE_POSITIVE: DEFAULT_BATTERY_CHARGE_POSITIVE,
         CONF_EV_PV_MODE: DEFAULT_EV_PV_MODE,
         CONF_EV_MANUAL_MODE: DEFAULT_EV_MANUAL_MODE,
+        CONF_EV_BATTERY_MODE: DEFAULT_EV_BATTERY_MODE,
         CONF_EV_DISCONNECTED_STATE: DEFAULT_EV_DISCONNECTED_STATE,
         CONF_EV_PRIORITY: DEFAULT_EV_PRIORITY,
         CONF_EV_MAX_CURRENT: DEFAULT_EV_MAX_CURRENT,

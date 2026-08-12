@@ -54,7 +54,6 @@
           "ev_voltage": "EV-fasespanning",
           "ev_phase_mode": "EV-fasemodus",
           "ev_mode": "Laadmodus",
-          "ev_override": "Batterij-naar-EV actief (optioneel)",
           "ev_manual_current": "Handmatige EV-stroom (optioneel)",
           "ev_battery_soc": "Secundaire batterij-SOC (optioneel)",
           "ev_battery_min_soc": "Minimum-SOC batterij-naar-EV (optioneel)",
@@ -63,6 +62,7 @@
           "battery_charge_positive": "Positief batterijvermogen betekent laden",
           "ev_pv_mode": "Waarde voor PV-laadmodus",
           "ev_manual_mode": "Waarde voor handmatige laadmodus",
+          "ev_battery_mode": "Waarde voor batterij-naar-EV-laadmodus",
           "ev_disconnected_state": "Waarde voor niet verbonden",
           "ev_priority": "PV-prioriteit voor EV",
           "ev_max_current": "Maximale EV-stroom",
@@ -78,7 +78,6 @@
           "ev_voltage": "Fase-nulspanning waarmee beschikbaar vermogen naar stroom wordt omgerekend.",
           "ev_phase_mode": "Select of sensor waarvan de status met 1 of 3 begint.",
           "ev_mode": "Select-entiteit waarmee de laadmodus wordt gekozen.",
-          "ev_override": "Wanneer deze aan staat, krijgt batterij-naar-EV voorrang op handmatig en PV-laden.",
           "ev_manual_current": "Number of input number in A met de stroom voor handmatig laden.",
           "ev_battery_soc": "Secundaire batterij-SOC die samen met de primaire SOC de batterijreserve bewaakt.",
           "ev_battery_min_soc": "Number of input number met de minimale batterijreserve.",
@@ -87,6 +86,7 @@
           "battery_charge_positive": "Schakel in wanneer positief batterijvermogen laden betekent; schakel uit wanneer negatief batterijvermogen laden betekent.",
           "ev_pv_mode": "Exacte laadmodusstatus waarin GridPilot PV-laden mag regelen.",
           "ev_manual_mode": "Exacte laadmodusstatus waarin GridPilot de helper voor handmatige stroom volgt.",
+          "ev_battery_mode": "Exacte laadmodusstatus waarin GridPilot de thuisbatterij naar de EV mag ontladen.",
           "ev_disconnected_state": "Exacte verbindingsstatus die betekent dat geen EV verbonden is.",
           "ev_priority": "Aandeel van beschikbare PV voor de EV zolang de thuisbatterij onder 98% blijft.",
           "ev_max_current": "Maximale stroom die GridPilot mag vragen. Standaard: 16 A.",
@@ -113,7 +113,7 @@
     },
     "error": {
       "load_entities_required": "Selecteer één totale verbruikssensor of alle drie de fasesensoren",
-      "mode_values_must_differ": "De waarden voor PV- en handmatige laadmodus moeten verschillen"
+      "mode_values_must_differ": "De waarden voor PV-, handmatige en batterij-naar-EV-laadmodus moeten verschillen"
     },
     "abort": {"already_configured": "GridPilot is al geconfigureerd"}
   },
@@ -137,7 +137,7 @@
       },
       "ev": {
         "title": "PV-overschot en EV-laden configureren",
-        "description": "GridPilot coördineert PV-, handmatig en batterij-naar-EV-laden. Batterij-naar-EV krijgt voorrang zolang de actieve entiteit aan staat.",
+        "description": "GridPilot coördineert PV-, handmatig en batterij-naar-EV-laden. De geconfigureerde laadmodusselectie is altijd leidend.",
         "data": {
           "grid_power": "Netvermogen",
           "ev_power": "EV-laadvermogen",
@@ -147,7 +147,6 @@
           "ev_voltage": "EV-fasespanning",
           "ev_phase_mode": "EV-fasemodus",
           "ev_mode": "Laadmodus",
-          "ev_override": "Batterij-naar-EV actief (optioneel)",
           "ev_manual_current": "Handmatige EV-stroom (optioneel)",
           "ev_battery_soc": "Secundaire batterij-SOC (optioneel)",
           "ev_battery_min_soc": "Minimum-SOC batterij-naar-EV (optioneel)",
@@ -156,6 +155,7 @@
           "battery_charge_positive": "Positief batterijvermogen betekent laden",
           "ev_pv_mode": "Waarde voor PV-laadmodus",
           "ev_manual_mode": "Waarde voor handmatige laadmodus",
+          "ev_battery_mode": "Waarde voor batterij-naar-EV-laadmodus",
           "ev_disconnected_state": "Waarde voor niet verbonden",
           "ev_priority": "PV-prioriteit voor EV",
           "ev_max_current": "Maximale EV-stroom",
@@ -171,7 +171,6 @@
           "ev_voltage": "Fase-nulspanning waarmee beschikbaar vermogen naar stroom wordt omgerekend.",
           "ev_phase_mode": "Select of sensor waarvan de status met 1 of 3 begint.",
           "ev_mode": "Select-entiteit waarmee de laadmodus wordt gekozen.",
-          "ev_override": "Wanneer deze aan staat, krijgt batterij-naar-EV voorrang op handmatig en PV-laden.",
           "ev_manual_current": "Number of input number in A met de stroom voor handmatig laden.",
           "ev_battery_soc": "Secundaire batterij-SOC die samen met de primaire SOC de batterijreserve bewaakt.",
           "ev_battery_min_soc": "Number of input number met de minimale batterijreserve.",
@@ -180,6 +179,7 @@
           "battery_charge_positive": "Schakel in wanneer positief batterijvermogen laden betekent; schakel uit wanneer negatief batterijvermogen laden betekent.",
           "ev_pv_mode": "Exacte laadmodusstatus waarin GridPilot PV-laden mag regelen.",
           "ev_manual_mode": "Exacte laadmodusstatus waarin GridPilot de helper voor handmatige stroom volgt.",
+          "ev_battery_mode": "Exacte laadmodusstatus waarin GridPilot de thuisbatterij naar de EV mag ontladen.",
           "ev_disconnected_state": "Exacte verbindingsstatus die betekent dat geen EV verbonden is.",
           "ev_priority": "Aandeel van beschikbare PV voor de EV zolang de thuisbatterij onder 98% blijft.",
           "ev_max_current": "Maximale stroom die GridPilot mag vragen. Standaard: 16 A.",

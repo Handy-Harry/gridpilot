@@ -5,7 +5,7 @@ from typing import Final
 
 DOMAIN: Final = "gridpilot"
 NAME: Final = "GridPilot"
-VERSION: Final = "0.4.0"
+VERSION: Final = "1.0.0"
 
 PLATFORMS: Final = ["sensor", "binary_sensor"]
 UPDATE_INTERVAL: Final = timedelta(minutes=1)
@@ -40,6 +40,7 @@ CONF_EV_VOLTAGE: Final = "ev_voltage"
 CONF_EV_PHASE_MODE: Final = "ev_phase_mode"
 CONF_EV_MODE: Final = "ev_mode"
 CONF_EV_OVERRIDE: Final = "ev_override"
+CONF_EV_BATTERY_MODE: Final = "ev_battery_mode"
 CONF_EV_MANUAL_MODE: Final = "ev_manual_mode"
 CONF_EV_MANUAL_CURRENT: Final = "ev_manual_current"
 CONF_EV_BATTERY_SOC: Final = "ev_battery_soc"

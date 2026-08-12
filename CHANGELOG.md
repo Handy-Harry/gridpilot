@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.0 - 2026-08-12
+
+- Make the charging-mode dropdown the sole EV strategy selector.
+- Add a configurable `Thuisbatterij naar auto` mode value.
+- Remove the legacy battery-to-EV override mapping through config-entry migration v6.
+- Keep active battery and EV actuation opt-in with safe neutral and 5 A fallbacks.
+- Validate the stable release with controller, migration, config-flow and fail-safe tests.
+
 ## 0.4.1 - 2026-08-11
 
 - Make the laadmodus dropdown authoritative over the battery-to-EV override.

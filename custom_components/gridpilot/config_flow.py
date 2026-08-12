@@ -18,6 +18,7 @@ from .const import (
     CONF_ENABLE_ACTUATION,
     CONF_ENABLE_EV_ACTUATION,
     CONF_EV_BATTERY_MIN_SOC,
+    CONF_EV_BATTERY_MODE,
     CONF_EV_BATTERY_SOC,
     CONF_EV_BATTERY_TARGET_TIME,
     CONF_EV_BATTERY_TIME_TO_GO,
@@ -29,7 +30,6 @@ from .const import (
     CONF_EV_MANUAL_MODE,
     CONF_EV_MAX_CURRENT,
     CONF_EV_MODE,
-    CONF_EV_OVERRIDE,
     CONF_EV_PHASE_MODE,
     CONF_EV_POWER,
     CONF_EV_PRIORITY,
@@ -49,6 +49,7 @@ from .const import (
     DEFAULT_CHARGE_SOC,
     DEFAULT_ENABLE_ACTUATION,
     DEFAULT_ENABLE_EV_ACTUATION,
+    DEFAULT_EV_BATTERY_MODE,
     DEFAULT_EV_DISCONNECTED_STATE,
     DEFAULT_EV_MANUAL_MODE,
     DEFAULT_EV_MAX_CURRENT,
@@ -74,7 +75,7 @@ def _entity_selector(domains: list[str]) -> selector.EntitySelector:
 class GridPilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle the GridPilot setup flow."""
 
-    VERSION = 5
+    VERSION = 6
     MINOR_VERSION = 0
 
     def __init__(self) -> None:
@@ -329,7 +330,6 @@ def _ev_options_schema(current: dict[str, Any]) -> vol.Schema:
             optional_entity(CONF_EV_VOLTAGE, ["sensor"]),
             optional_entity(CONF_EV_PHASE_MODE, ["select", "sensor"]),
             optional_entity(CONF_EV_MODE, ["input_select", "select"]),
-            optional_entity(CONF_EV_OVERRIDE, ["input_boolean", "binary_sensor"]),
             optional_entity(CONF_EV_MANUAL_CURRENT, ["input_number", "number"]),
             optional_entity(CONF_EV_BATTERY_SOC, ["sensor"]),
             optional_entity(CONF_EV_BATTERY_MIN_SOC, ["input_number", "number"]),
@@ -353,6 +353,10 @@ def _ev_options_schema(current: dict[str, Any]) -> vol.Schema:
             vol.Required(
                 CONF_EV_MANUAL_MODE,
                 default=current.get(CONF_EV_MANUAL_MODE, DEFAULT_EV_MANUAL_MODE),
+            ): selector.TextSelector(),
+            vol.Required(
+                CONF_EV_BATTERY_MODE,
+                default=current.get(CONF_EV_BATTERY_MODE, DEFAULT_EV_BATTERY_MODE),
             ): selector.TextSelector(),
             vol.Required(
                 CONF_EV_DISCONNECTED_STATE,
@@ -397,6 +401,12 @@ def _ev_options_schema(current: dict[str, Any]) -> vol.Schema:
 
 def _ev_options_errors(options: dict[str, Any]) -> dict[str, str]:
     """Validate relationships between EV options."""
-    if options.get(CONF_EV_PV_MODE) == options.get(CONF_EV_MANUAL_MODE):
-        return {CONF_EV_MANUAL_MODE: "mode_values_must_differ"}
+    modes = {
+        CONF_EV_PV_MODE: options.get(CONF_EV_PV_MODE),
+        CONF_EV_MANUAL_MODE: options.get(CONF_EV_MANUAL_MODE),
+        CONF_EV_BATTERY_MODE: options.get(CONF_EV_BATTERY_MODE),
+    }
+    values = [value for value in modes.values() if value is not None]
+    if len(values) != len(set(values)):
+        return {CONF_EV_BATTERY_MODE: "mode_values_must_differ"}
     return {}
