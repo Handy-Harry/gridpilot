@@ -395,6 +395,40 @@ async def test_strategy_change_bypasses_normal_ev_rate_limit(
     assert [call.data["value"] for call in calls] == [6, 10]
 
 
+async def test_strategy_change_starts_from_measured_current(
+    hass: HomeAssistant,
+) -> None:
+    _set_valid_states(hass)
+    _set_ev_states(hass, mode="Manueel")
+    _set_manual_ev_state(hass, 10)
+    calls: list[ServiceCall] = []
+    hass.services.async_register("number", "set_value", calls.append)
+    controller = GridPilotController(
+        hass,
+        _entry(
+            False,
+            enable_ev_actuation=True,
+            configure_manual=True,
+        ),
+    )
+
+    await controller.async_refresh()
+    hass.states.async_set("input_select.ev_mode", "PV laden")
+    hass.states.async_set(
+        "number.ev_current",
+        "10",
+        {
+            "min": 0,
+            "max": 32,
+            "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
+        },
+    )
+    await controller.async_refresh()
+
+    assert controller.ev_decision.requested_current == 9.5
+    assert [call.data["value"] for call in calls] == [10, 9.5]
+
+
 async def test_battery_to_ev_toggle_does_not_override_pv_mode(
     hass: HomeAssistant,
 ) -> None:
@@ -462,7 +496,7 @@ async def test_battery_to_ev_reserve_soc_forces_safe_pause(
     assert calls[0].data["value"] == 5
 
 
-async def test_battery_to_ev_handoff_starts_at_six_amps(
+async def test_battery_to_ev_handoff_preserves_measured_current(
     hass: HomeAssistant,
 ) -> None:
     _set_valid_states(hass)
@@ -493,10 +527,10 @@ async def test_battery_to_ev_handoff_starts_at_six_amps(
     await controller.async_refresh()
 
     assert controller.ev_decision.strategy == "battery_to_ev"
-    assert controller.ev_decision.requested_current == 6
+    assert controller.ev_decision.requested_current == 16
 
 
-async def test_battery_to_ev_handoff_to_pv_does_not_use_stop_delay(
+async def test_battery_to_ev_handoff_to_pv_calculates_from_measured_current(
     hass: HomeAssistant,
 ) -> None:
     _set_valid_states(hass)
@@ -525,8 +559,8 @@ async def test_battery_to_ev_handoff_to_pv_does_not_use_stop_delay(
     await controller.async_refresh()
 
     assert controller.ev_decision.strategy == "pv"
-    assert controller.ev_decision.mode == "waiting"
-    assert controller.ev_decision.requested_current == 5
+    assert controller.ev_decision.mode == "stop_delay"
+    assert controller.ev_decision.requested_current == 6
 
 
 async def test_battery_reserve_pause_bypasses_ev_rate_limit(

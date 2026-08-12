@@ -1,7 +1,7 @@
 """Tests for GridPilot number entities."""
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 from custom_components.gridpilot.const import CONF_EV_PRIORITY, DEFAULT_EV_PRIORITY
 from custom_components.gridpilot.number import EVPriorityNumber
@@ -26,10 +26,8 @@ async def test_ev_priority_updates_config_entry() -> None:
     entry = _entry({CONF_EV_PRIORITY: 50, "other": True})
     entity = EVPriorityNumber(entry)
     entity.hass = MagicMock()
+    entity.controller.async_update_ev_priority = AsyncMock()
 
     await entity.async_set_native_value(80)
 
-    entity.hass.config_entries.async_update_entry.assert_called_once_with(
-        entry,
-        options={CONF_EV_PRIORITY: 80, "other": True},
-    )
+    entity.controller.async_update_ev_priority.assert_awaited_once_with(80)
