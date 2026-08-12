@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.3 - 2026-08-12
+
+- Preserve the measured EV charging current while changing PV priority or switching
+  charging strategies; write the 5 A stop value only for an explicit stop decision.
+
 ## Unreleased
 
 - Preserve the measured EV charging current while changing PV priority or switching

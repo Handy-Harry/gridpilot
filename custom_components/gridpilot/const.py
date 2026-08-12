@@ -5,7 +5,7 @@ from typing import Final
 
 DOMAIN: Final = "gridpilot"
 NAME: Final = "GridPilot"
-VERSION: Final = "1.1.2"
+VERSION: Final = "1.1.3"
 
 PLATFORMS: Final = ["sensor", "binary_sensor", "number"]
 UPDATE_INTERVAL: Final = timedelta(minutes=1)
