@@ -20,6 +20,7 @@ from .const import (
     CONF_BATTERY_CHARGE_POSITIVE,
     CONF_BATTERY_POWER,
     CONF_BATTERY_SOC,
+    CONF_CHARGE_SOC,
     CONF_EV_BATTERY_MIN_SOC,
     CONF_EV_BATTERY_MODE,
     CONF_EV_CURRENT_LIMIT,
@@ -32,10 +33,12 @@ from .const import (
     CONF_EV_VEHICLE_SOC,
     CONF_GRID_SETPOINT,
     DEFAULT_BATTERY_CHARGE_POSITIVE,
+    DEFAULT_CHARGE_SOC,
     DEFAULT_EV_BATTERY_MODE,
     DEFAULT_EV_MANUAL_MODE,
     DEFAULT_EV_PV_MODE,
     DOMAIN,
+    SOC_THRESHOLD_OFFSET,
 )
 from .runtime import GridPilotConfigEntry
 
@@ -118,6 +121,7 @@ def _dashboard_config(
     actuation_healthy = _gridpilot_entity(
         hass, entry, "binary_sensor", "actuation_healthy"
     )
+    charge_soc = float(entry.options.get(CONF_CHARGE_SOC, DEFAULT_CHARGE_SOC))
 
     battery_cards: list[dict[str, Any]] = [
         {
@@ -134,6 +138,9 @@ def _dashboard_config(
             "power_charge_positive": entry.options.get(
                 CONF_BATTERY_CHARGE_POSITIVE, DEFAULT_BATTERY_CHARGE_POSITIVE
             ),
+            "minimum_soc": charge_soc - SOC_THRESHOLD_OFFSET,
+            "charge_below": charge_soc,
+            "normal_above": charge_soc + SOC_THRESHOLD_OFFSET,
             "setpoint_entity": calculated_setpoint,
         },
         {
@@ -195,10 +202,23 @@ def _ev_cards(
     cards: list[dict[str, Any]] = [
         {
             "type": "heading",
-            "heading": "Wagen laden",
+            "heading": "EV laden",
             "heading_style": "title",
             "icon": "mdi:ev-station",
         },
+    ]
+    if options.get(CONF_EV_VEHICLE_SOC):
+        card: dict[str, Any] = {
+            "type": "custom:gridpilot-card",
+            "name": "EV-batterij",
+            "entity": options[CONF_EV_VEHICLE_SOC],
+        }
+        if options.get(CONF_EV_POWER):
+            card["power_entity"] = options[CONF_EV_POWER]
+        cards.append(card)
+
+    cards.extend(
+        [
         {
             "type": "tile",
             "entity": options[CONF_EV_MODE],
@@ -223,7 +243,8 @@ def _ev_cards(
                 "features": [{"type": "numeric-input", "style": "slider"}],
             },
         },
-    ]
+        ]
+    )
     manual_entities = [
         options.get(CONF_EV_MANUAL_CURRENT),
         options.get(CONF_EV_PHASE_MODE),
@@ -297,16 +318,6 @@ def _ev_cards(
                 },
             }
         )
-    if options.get(CONF_EV_VEHICLE_SOC):
-        card: dict[str, Any] = {
-            "type": "custom:gridpilot-card",
-            "name": "EV-batterij",
-            "entity": options[CONF_EV_VEHICLE_SOC],
-        }
-        if options.get(CONF_EV_POWER):
-            card["power_entity"] = options[CONF_EV_POWER]
-        cards.append(card)
-
     cards.extend(
         [
             {

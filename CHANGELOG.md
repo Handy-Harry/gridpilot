@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1 - 2026-08-12
+
+- Add correctly sized local 1x and 2x GridPilot icon and logo assets.
+- Keep the EV-battery card at the top of the EV charging dashboard section.
+- Restore the derived battery-curve thresholds on the home-battery card.
+
 ## 1.1.0 - 2026-08-12
 
 - Add an installation-managed GridPilot dashboard with PV-priority, manual EV controls and a battery-to-EV discharge limit.

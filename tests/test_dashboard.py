@@ -8,6 +8,7 @@ from homeassistant.core import HomeAssistant
 from custom_components.gridpilot.const import (
     CONF_BATTERY_POWER,
     CONF_BATTERY_SOC,
+    CONF_CHARGE_SOC,
     CONF_EV_BATTERY_MIN_SOC,
     CONF_EV_CURRENT_LIMIT,
     CONF_EV_MANUAL_CURRENT,
@@ -111,6 +112,7 @@ def test_dashboard_uses_configured_entities() -> None:
                     CONF_EV_MODE: "input_select.charge_mode",
                     CONF_EV_VEHICLE_SOC: "sensor.ev_soc",
                     CONF_EV_BATTERY_MIN_SOC: "input_number.minimum_soc",
+                    CONF_CHARGE_SOC: 15,
                     CONF_EV_CURRENT_LIMIT: "number.ev_current",
                     CONF_EV_MANUAL_CURRENT: "input_number.manual_current",
                     CONF_EV_PHASE_MODE: "select.ev_phases",
@@ -122,6 +124,10 @@ def test_dashboard_uses_configured_entities() -> None:
     rendered = str(config)
     assert "sensor.battery_soc" in rendered
     assert "power_charge_positive" in rendered
+    battery_card = config["views"][0]["sections"][0]["cards"][1]
+    assert battery_card["minimum_soc"] == 10
+    assert battery_card["charge_below"] == 15
+    assert battery_card["normal_above"] == 20
     assert "number.grid_setpoint" in rendered
     assert "input_select.charge_mode" in rendered
     assert "sensor.ev_soc" in rendered
@@ -131,6 +137,10 @@ def test_dashboard_uses_configured_entities() -> None:
     assert "select.ev_phases" in rendered
     assert "input_number.minimum_soc" in rendered
     assert "Thuisbatterij ontladen tot" in rendered
+    ev_cards = config["views"][0]["sections"][1]["cards"]
+    assert ev_cards[0]["heading"] == "EV laden"
+    assert ev_cards[1]["type"] == "custom:gridpilot-card"
+    assert ev_cards[1]["name"] == "EV-batterij"
     assert "PV-prioriteit: thuisbatterij 0% / EV 100%" in rendered
     assert "gpt_" not in rendered
     assert "thuisbatterij_naar_auto" not in rendered
