@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0 - 2026-08-12
+
+- Add an installation-managed GridPilot dashboard with PV-priority, manual EV controls and a battery-to-EV discharge limit.
+- Add an optional vehicle-SOC mapping for the dashboard EV-battery card.
+- Derive card charging and discharging activity from power when no explicit status mapping is available.
+
 ## 1.0.0 - 2026-08-12
 
 - Make the charging-mode dropdown the sole EV strategy selector.

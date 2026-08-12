@@ -32,7 +32,17 @@ after the existing battery controller has been disabled.
 - Authoritative charging-mode selection without a separate override entity.
 - Measurement-validity binary sensor.
 - Bundled `custom:gridpilot-card` frontend card.
+- Automatic `GridPilot` dashboard with battery, setpoint and EV-control status.
 - Dutch and English translations.
+
+GridPilot creates a storage dashboard at `/gridpilot-dashboard`, adds it to the
+Home Assistant sidebar and refreshes its configuration whenever the integration
+loads. The dashboard includes an EV-priority slider in PV mode and manual current
+and phase controls in manual mode. Battery-to-EV mode shows the configured
+minimum home-battery SOC as an adjustable discharge-limit slider.
+
+Configure the optional **EV SOC for dashboard** entity to show a separate vehicle
+battery card. This mapping is display-only and is not used for battery-to-EV safety.
 
 ## Manual development installation
 

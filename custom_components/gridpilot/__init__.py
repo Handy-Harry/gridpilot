@@ -66,15 +66,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) ->
     from homeassistant.const import Platform
 
     from .controller import GridPilotController
+    from .dashboard import async_ensure_dashboard
     from .runtime import GridPilotRuntime
 
     await _async_setup_frontend(hass)
-    platforms = [Platform.SENSOR, Platform.BINARY_SENSOR]
+    platforms = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.NUMBER]
     controller = GridPilotController(hass, entry)
     entry.runtime_data = GridPilotRuntime(controller=controller)
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
     await hass.config_entries.async_forward_entry_setups(entry, platforms)
     await controller.async_start()
+    await async_ensure_dashboard(hass, entry)
     return True
 
 
@@ -158,7 +160,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) -
     if not await entry.runtime_data.controller.async_shutdown():
         return False
     return await hass.config_entries.async_unload_platforms(
-        entry, [Platform.SENSOR, Platform.BINARY_SENSOR]
+        entry, [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.NUMBER]
     )
 
 

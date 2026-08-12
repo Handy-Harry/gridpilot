@@ -194,17 +194,28 @@ class GridPilotCard extends HTMLElement {
     const status = this._config.status_entity
       ? hass.states[this._config.status_entity]?.state
       : undefined;
-    const charging = status === (this._config.charge_state || "charging");
-    const discharging = this._config.discharge_state
-      && status === this._config.discharge_state;
-    const mode = charging ? "charging" : discharging ? "discharging" : "standby";
-    const defaultLabel = charging ? "Laden" : discharging ? "Ontladen" : "Stand-by";
-
     const powerState = this._config.power_entity
       ? hass.states[this._config.power_entity]
       : undefined;
-    const power = Math.abs(Number.parseFloat(powerState?.state));
+    const signedPower = Number.parseFloat(powerState?.state);
     const powerUnit = powerState?.attributes?.unit_of_measurement;
+    const activityThreshold = powerUnit === "W" ? 10 : 0.01;
+    const powerActive = Number.isFinite(signedPower)
+      && Math.abs(signedPower) > activityThreshold;
+    const chargePositive = this._config.power_charge_positive !== false;
+    const chargingFromPower = powerActive
+      && (chargePositive ? signedPower > 0 : signedPower < 0);
+    const dischargingFromPower = powerActive && !chargingFromPower;
+    const charging = status === (this._config.charge_state || "charging")
+      || (!this._config.charge_state && chargingFromPower);
+    const discharging = Boolean(
+      this._config.discharge_state
+      && status === this._config.discharge_state,
+    ) || (!this._config.discharge_state && dischargingFromPower);
+    const mode = charging ? "charging" : discharging ? "discharging" : "standby";
+    const defaultLabel = charging ? "Laden" : discharging ? "Ontladen" : "Stand-by";
+
+    const power = Math.abs(signedPower);
     const powerInKw = powerUnit === "kW" ? power : powerUnit === "MW" ? power * 1000 : power / 1000;
     const activityLabel = (charging || discharging) && Number.isFinite(power)
       ? `${charging ? "Laden" : "Ontladen"} met ${new Intl.NumberFormat(hass.locale?.language, { maximumFractionDigits: 1 }).format(powerInKw)} kW`

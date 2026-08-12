@@ -48,6 +48,7 @@
         "data": {
           "grid_power": "Grid power",
           "ev_power": "EV charging power",
+          "ev_vehicle_soc": "EV SOC for dashboard (optional)",
           "ev_connection_state": "EV connection state",
           "ev_current_limit": "Writable EV current limit",
           "ev_current_feedback": "Applied EV current limit (optional)",
@@ -72,6 +73,7 @@
         "data_description": {
           "grid_power": "Grid power in W or kW, positive for import and negative for export.",
           "ev_power": "Current EV charging power in W or kW.",
+          "ev_vehicle_soc": "Optional vehicle state-of-charge sensor shown on the GridPilot dashboard.",
           "ev_connection_state": "Entity whose state indicates whether an EV is connected.",
           "ev_current_limit": "Writable number entity in A. Alfen Modbus example: number.alfen_max_current_limit_s1.",
           "ev_current_feedback": "Optional sensor or number reporting the applied current limit.",
@@ -143,6 +145,7 @@
         "data": {
           "grid_power": "Grid power",
           "ev_power": "EV charging power",
+          "ev_vehicle_soc": "EV SOC for dashboard (optional)",
           "ev_connection_state": "EV connection state",
           "ev_current_limit": "Writable EV current limit",
           "ev_current_feedback": "Applied EV current limit (optional)",
@@ -167,6 +170,7 @@
         "data_description": {
           "grid_power": "Grid power in W or kW, positive for import and negative for export.",
           "ev_power": "Current EV charging power in W or kW.",
+          "ev_vehicle_soc": "Optional vehicle state-of-charge sensor shown on the GridPilot dashboard.",
           "ev_connection_state": "Entity whose state indicates whether an EV is connected.",
           "ev_current_limit": "Writable number entity in A. Alfen Modbus example: number.alfen_max_current_limit_s1.",
           "ev_current_feedback": "Optional sensor or number reporting the applied current limit.",
@@ -203,6 +207,11 @@
     }
   },
   "entity": {
+    "number": {
+      "ev_priority": {
+        "name": "EV priority"
+      }
+    },
     "sensor": {
       "calculated_grid_setpoint": {"name": "Calculated grid setpoint"},
       "operating_mode": {

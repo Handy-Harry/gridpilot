@@ -5,9 +5,9 @@ from typing import Final
 
 DOMAIN: Final = "gridpilot"
 NAME: Final = "GridPilot"
-VERSION: Final = "1.0.0"
+VERSION: Final = "1.1.0"
 
-PLATFORMS: Final = ["sensor", "binary_sensor"]
+PLATFORMS: Final = ["sensor", "binary_sensor", "number"]
 UPDATE_INTERVAL: Final = timedelta(minutes=1)
 MIN_ACTUATION_INTERVAL: Final = timedelta(seconds=10)
 EV_UPDATE_INTERVAL: Final = timedelta(seconds=10)
@@ -33,6 +33,7 @@ CONF_MINIMUM_CHARGE_POWER: Final = "minimum_charge_power"
 CONF_ENABLE_ACTUATION: Final = "enable_actuation"
 CONF_GRID_POWER: Final = "grid_power"
 CONF_EV_POWER: Final = "ev_power"
+CONF_EV_VEHICLE_SOC: Final = "ev_vehicle_soc"
 CONF_EV_CONNECTION_STATE: Final = "ev_connection_state"
 CONF_EV_CURRENT_LIMIT: Final = "ev_current_limit"
 CONF_EV_CURRENT_FEEDBACK: Final = "ev_current_feedback"

@@ -34,6 +34,7 @@ from .const import (
     CONF_EV_POWER,
     CONF_EV_PRIORITY,
     CONF_EV_PV_MODE,
+    CONF_EV_VEHICLE_SOC,
     CONF_EV_VOLTAGE,
     CONF_GRID_POWER,
     CONF_GRID_SETPOINT,
@@ -324,6 +325,7 @@ def _ev_options_schema(current: dict[str, Any]) -> vol.Schema:
         [
             optional_entity(CONF_GRID_POWER, ["sensor"]),
             optional_entity(CONF_EV_POWER, ["sensor"]),
+            optional_entity(CONF_EV_VEHICLE_SOC, ["sensor"]),
             optional_entity(CONF_EV_CONNECTION_STATE, ["sensor"]),
             optional_entity(CONF_EV_CURRENT_LIMIT, ["number"]),
             optional_entity(CONF_EV_CURRENT_FEEDBACK, ["sensor", "number"]),

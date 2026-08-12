@@ -48,6 +48,7 @@
         "data": {
           "grid_power": "Netvermogen",
           "ev_power": "EV-laadvermogen",
+          "ev_vehicle_soc": "EV-SOC voor dashboard (optioneel)",
           "ev_connection_state": "EV-verbindingsstatus",
           "ev_current_limit": "Schrijfbare EV-stroomlimiet",
           "ev_current_feedback": "Toegepaste EV-stroomlimiet (optioneel)",
@@ -72,6 +73,7 @@
         "data_description": {
           "grid_power": "Netvermogen in W of kW, positief voor afname en negatief voor injectie.",
           "ev_power": "Actueel EV-laadvermogen in W of kW.",
+          "ev_vehicle_soc": "Optionele SOC-sensor van de wagen die op het GridPilot-dashboard wordt getoond.",
           "ev_connection_state": "Entiteit waarvan de status aangeeft of een EV verbonden is.",
           "ev_current_limit": "Schrijfbare number-entiteit in A. Alfen Modbus-voorbeeld: number.alfen_max_current_limit_s1.",
           "ev_current_feedback": "Optionele sensor of number met de toegepaste stroomlimiet.",
@@ -141,6 +143,7 @@
         "data": {
           "grid_power": "Netvermogen",
           "ev_power": "EV-laadvermogen",
+          "ev_vehicle_soc": "EV-SOC voor dashboard (optioneel)",
           "ev_connection_state": "EV-verbindingsstatus",
           "ev_current_limit": "Schrijfbare EV-stroomlimiet",
           "ev_current_feedback": "Toegepaste EV-stroomlimiet (optioneel)",
@@ -165,6 +168,7 @@
         "data_description": {
           "grid_power": "Netvermogen in W of kW, positief voor afname en negatief voor injectie.",
           "ev_power": "Actueel EV-laadvermogen in W of kW.",
+          "ev_vehicle_soc": "Optionele SOC-sensor van de wagen die op het GridPilot-dashboard wordt getoond.",
           "ev_connection_state": "Entiteit waarvan de status aangeeft of een EV verbonden is.",
           "ev_current_limit": "Schrijfbare number-entiteit in A. Alfen Modbus-voorbeeld: number.alfen_max_current_limit_s1.",
           "ev_current_feedback": "Optionele sensor of number met de toegepaste stroomlimiet.",
@@ -198,6 +202,11 @@
     }
   },
   "entity": {
+    "number": {
+      "ev_priority": {
+        "name": "PV-prioriteit EV"
+      }
+    },
     "sensor": {
       "calculated_grid_setpoint": {"name": "Berekend netsetpoint"},
       "operating_mode": {
