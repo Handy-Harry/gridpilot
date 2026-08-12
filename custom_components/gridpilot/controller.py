@@ -148,6 +148,22 @@ class GridPilotController:
         self._ev_restart_until: float | None = None
         self._ev_power_samples: deque[tuple[float, float]] = deque()
         self._ev_current_samples: deque[tuple[float, float]] = deque()
+        self._skip_next_options_reload = False
+
+    async def async_update_ev_priority(self, value: float) -> None:
+        """Update EV priority without pausing the active EV charger."""
+        self._skip_next_options_reload = True
+        self.hass.config_entries.async_update_entry(
+            self.entry,
+            options={**self.entry.options, CONF_EV_PRIORITY: value},
+        )
+        await self.async_refresh()
+
+    def consume_options_reload_skip(self) -> bool:
+        """Return and clear the one-shot reload suppression flag."""
+        skip_reload = self._skip_next_options_reload
+        self._skip_next_options_reload = False
+        return skip_reload
 
     async def async_start(self) -> None:
         """Start state and interval tracking."""
@@ -333,7 +349,6 @@ class GridPilotController:
     def _calculate_ev_decision(self) -> None:
         """Select and calculate one EV charging strategy."""
         options = self.entry.options
-        previous_strategy = self.ev_decision.strategy
         strategy = EV_STRATEGY_NONE
         common = {CONF_EV_CONNECTION_STATE, CONF_EV_CURRENT_LIMIT}
         missing = sorted(key for key in common if not options.get(key))
@@ -393,7 +408,7 @@ class GridPilotController:
 
             self._validate_ev_actuator()
             if strategy == EV_STRATEGY_PV:
-                self._calculate_pv_ev_decision(options, previous_strategy)
+                self._calculate_pv_ev_decision(options)
             elif strategy == EV_STRATEGY_MANUAL:
                 self._clear_ev_samples()
                 self.ev_decision = calculate_manual_ev_decision(
@@ -413,8 +428,6 @@ class GridPilotController:
                 self.ev_decision = calculate_battery_to_ev_decision(
                     current=(
                         measured_current
-                        if previous_strategy == EV_STRATEGY_BATTERY_TO_EV
-                        else EV_PAUSE_CURRENT
                     ),
                     battery_soc=self._numeric_state(self.entry.data[CONF_BATTERY_SOC]),
                     secondary_soc=self._numeric_state(options[CONF_EV_BATTERY_SOC]),
@@ -477,7 +490,7 @@ class GridPilotController:
         )
 
     def _calculate_pv_ev_decision(
-        self, options: dict[str, Any], previous_strategy: str
+        self, options: dict[str, Any]
     ) -> None:
         """Calculate the stateful PV-surplus charging strategy."""
         soc = self._numeric_state(self.entry.data[CONF_BATTERY_SOC])
@@ -549,8 +562,6 @@ class GridPilotController:
         requested, control_mode, reason = self._ev_requested_current(
             current=(
                 measured_current
-                if previous_strategy == EV_STRATEGY_PV
-                else EV_PAUSE_CURRENT
             ),
             target=target,
             target_median=target_median,

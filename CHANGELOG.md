@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Preserve the measured EV charging current while changing PV priority or switching
+  charging strategies; write the 5 A stop value only for an explicit stop decision.
+
 ## 1.1.2 - 2026-08-12
 
 - Rename the EV charging mode label to `Thuisbatterij naar EV` and use `Automatisch` in the dashboard selector.

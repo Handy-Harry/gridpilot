@@ -32,10 +32,7 @@ class EVPriorityNumber(GridPilotEntity, NumberEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         """Persist a new EV priority in the config entry."""
-        self.hass.config_entries.async_update_entry(
-            self.entry,
-            options={**self.entry.options, CONF_EV_PRIORITY: value},
-        )
+        await self.controller.async_update_ev_priority(value)
 
 
 async def async_setup_entry(

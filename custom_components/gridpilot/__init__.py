@@ -166,4 +166,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) -
 
 async def _async_reload_entry(hass: HomeAssistant, entry: ConfigEntry[Any]) -> None:
     """Reload after options change."""
+    if entry.runtime_data.controller.consume_options_reload_skip():
+        return
     await hass.config_entries.async_reload(entry.entry_id)
