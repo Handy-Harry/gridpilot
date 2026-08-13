@@ -9,7 +9,7 @@ from homeassistant.const import EntityCategory, UnitOfElectricCurrent, UnitOfPow
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import EV_MODES, EV_STRATEGIES, MODES
+from .const import EV_CONTROL_MODES, EV_STRATEGIES, MODES
 from .entity import GridPilotEntity
 from .runtime import GridPilotConfigEntry
 
@@ -101,7 +101,7 @@ class EVOperatingModeSensor(GridPilotEntity, SensorEntity):
 
     _attr_translation_key = "ev_operating_mode"
     _attr_device_class = SensorDeviceClass.ENUM
-    _attr_options = EV_MODES
+    _attr_options = EV_CONTROL_MODES
 
     def __init__(self, entry: GridPilotConfigEntry) -> None:
         super().__init__(entry)

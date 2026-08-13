@@ -31,22 +31,18 @@ from .const import (
     CONF_ENABLE_ACTUATION,
     CONF_ENABLE_EV_ACTUATION,
     CONF_EV_BATTERY_MIN_SOC,
-    CONF_EV_BATTERY_MODE,
     CONF_EV_BATTERY_SOC,
     CONF_EV_BATTERY_TARGET_TIME,
     CONF_EV_BATTERY_TIME_TO_GO,
     CONF_EV_CONNECTION_STATE,
     CONF_EV_CURRENT_FEEDBACK,
     CONF_EV_CURRENT_LIMIT,
-    CONF_EV_DISCONNECTED_STATE,
     CONF_EV_MANUAL_CURRENT,
-    CONF_EV_MANUAL_MODE,
     CONF_EV_MAX_CURRENT,
-    CONF_EV_MODE,
+    CONF_GRIDPILOT_EV_MODE,
     CONF_EV_PHASE_MODE,
     CONF_EV_POWER,
     CONF_EV_PRIORITY,
-    CONF_EV_PV_MODE,
     CONF_EV_VOLTAGE,
     CONF_GRID_POWER,
     CONF_GRID_SETPOINT,
@@ -55,8 +51,11 @@ from .const import (
     CONF_HOME_LOAD_L2,
     CONF_HOME_LOAD_L3,
     CONF_MAX_GRID_POWER,
-    CONF_MINIMUM_CHARGE_POWER,
     CONF_PV_SAFETY_MARGIN,
+    CONF_SOC_LOAD_ENTITIES,
+    CONF_SOC_LOAD_OFF_THRESHOLD,
+    CONF_SOC_LOAD_ON_THRESHOLD,
+    CONF_ENABLE_SOC_LOAD_ACTUATION,
     DEFAULT_BATTERY_CHARGE_POSITIVE,
     DEFAULT_CHARGE_SOC,
     DEFAULT_ENABLE_ACTUATION,
@@ -64,12 +63,16 @@ from .const import (
     DEFAULT_EV_BATTERY_MODE,
     DEFAULT_EV_DISCONNECTED_STATE,
     DEFAULT_EV_MANUAL_MODE,
+    DEFAULT_EV_MODE,
+    DEFAULT_EV_OFF_MODE,
     DEFAULT_EV_MAX_CURRENT,
     DEFAULT_EV_PRIORITY,
     DEFAULT_EV_PV_MODE,
     DEFAULT_MAX_GRID_POWER,
-    DEFAULT_MINIMUM_CHARGE_POWER,
     DEFAULT_PV_SAFETY_MARGIN,
+    DEFAULT_SOC_LOAD_OFF_THRESHOLD,
+    DEFAULT_SOC_LOAD_ON_THRESHOLD,
+    DEFAULT_ENABLE_SOC_LOAD_ACTUATION,
     EV_CURRENT_DEADBAND,
     EV_CURRENT_MEDIAN_WINDOW,
     EV_CURRENT_STEP,
@@ -96,6 +99,7 @@ from .const import (
     MIN_ACTUATION_INTERVAL,
     MODE_UNAVAILABLE,
     UPDATE_INTERVAL,
+    SOC_LOAD_DOMAINS,
 )
 from .ev_calculations import (
     calculate_battery_to_ev_decision,
@@ -149,6 +153,12 @@ class GridPilotController:
         self._ev_power_samples: deque[tuple[float, float]] = deque()
         self._ev_current_samples: deque[tuple[float, float]] = deque()
         self._skip_next_options_reload = False
+        self._soc_load_actuation_enabled = bool(
+            entry.options.get(
+                CONF_ENABLE_SOC_LOAD_ACTUATION, DEFAULT_ENABLE_SOC_LOAD_ACTUATION
+            )
+        )
+        self.last_soc_load_actuation_error: str | None = None
 
     async def async_update_ev_priority(self, value: float) -> None:
         """Update EV priority without pausing the active EV charger."""
@@ -156,6 +166,15 @@ class GridPilotController:
         self.hass.config_entries.async_update_entry(
             self.entry,
             options={**self.entry.options, CONF_EV_PRIORITY: value},
+        )
+        await self.async_refresh()
+
+    async def async_update_ev_mode(self, value: str) -> None:
+        """Persist the GridPilot-owned EV charging mode."""
+        self._skip_next_options_reload = True
+        self.hass.config_entries.async_update_entry(
+            self.entry,
+            options={**self.entry.options, CONF_GRIDPILOT_EV_MODE: value},
         )
         await self.async_refresh()
 
@@ -194,7 +213,6 @@ class GridPilotController:
                 CONF_EV_CURRENT_FEEDBACK,
                 CONF_EV_VOLTAGE,
                 CONF_EV_PHASE_MODE,
-                CONF_EV_MODE,
                 CONF_EV_MANUAL_CURRENT,
                 CONF_EV_BATTERY_SOC,
                 CONF_EV_BATTERY_MIN_SOC,
@@ -239,12 +257,7 @@ class GridPilotController:
                 max_grid_power = self._max_grid_power()
                 curve = BatteryCurve(
                     charge_soc=float(options.get(CONF_CHARGE_SOC, DEFAULT_CHARGE_SOC)),
-                    minimum_charge_power=float(
-                        options.get(
-                            CONF_MINIMUM_CHARGE_POWER,
-                            DEFAULT_MINIMUM_CHARGE_POWER,
-                        )
-                    ),
+                    minimum_charge_power=max_grid_power * 0.1,
                 )
                 self.decision = calculate_battery_decision(
                     soc=soc,
@@ -263,6 +276,7 @@ class GridPilotController:
             self._calculate_ev_decision()
             await self._async_apply_decision()
             await self._async_apply_ev_decision()
+            await self._async_apply_soc_load_decision()
 
             for listener in tuple(self._listeners):
                 listener()
@@ -370,10 +384,7 @@ class GridPilotController:
                 return
 
             connection_state = self._state(options[CONF_EV_CONNECTION_STATE])
-            disconnected = str(
-                options.get(CONF_EV_DISCONNECTED_STATE, DEFAULT_EV_DISCONNECTED_STATE)
-            )
-            if connection_state == disconnected:
+            if connection_state == DEFAULT_EV_DISCONNECTED_STATE:
                 self._clear_ev_samples()
                 self.ev_decision = EVControlDecision(
                     valid=True,
@@ -448,18 +459,15 @@ class GridPilotController:
 
     def _selected_ev_strategy(self, options: dict[str, Any]) -> str:
         """Return the selected strategy, with the configured mode taking priority."""
-        mode_entity = options.get(CONF_EV_MODE)
-        if not mode_entity:
-            raise ValueError("EV charging mode is not configured")
-        mode = self._state(str(mode_entity))
-        if mode == str(options.get(CONF_EV_PV_MODE, DEFAULT_EV_PV_MODE)):
+        mode = str(options.get(CONF_GRIDPILOT_EV_MODE, DEFAULT_EV_MODE))
+        if mode == DEFAULT_EV_OFF_MODE:
+            return EV_STRATEGY_NONE
+        if mode == DEFAULT_EV_PV_MODE:
             return EV_STRATEGY_PV
-        if mode == str(options.get(CONF_EV_MANUAL_MODE, DEFAULT_EV_MANUAL_MODE)):
+        if mode == DEFAULT_EV_MANUAL_MODE:
             return EV_STRATEGY_MANUAL
 
-        if mode == str(
-            options.get(CONF_EV_BATTERY_MODE, DEFAULT_EV_BATTERY_MODE)
-        ):
+        if mode == DEFAULT_EV_BATTERY_MODE:
             battery_options = {
                 CONF_GRID_POWER,
                 CONF_EV_BATTERY_SOC,
@@ -666,6 +674,68 @@ class GridPilotController:
         except (HomeAssistantError, KeyError, TypeError, ValueError) as err:
             self.last_ev_actuation_error = str(err)
             _LOGGER.error("Unable to apply GridPilot EV current: %s", err)
+
+    async def _async_apply_soc_load_decision(self) -> None:
+        """Turn flexible loads on and off using SOC hysteresis."""
+        if not self._soc_load_actuation_enabled:
+            self.last_soc_load_actuation_error = None
+            return
+        entities = self.entry.options.get(CONF_SOC_LOAD_ENTITIES, [])
+        if not entities:
+            self.last_soc_load_actuation_error = None
+            return
+        if not isinstance(entities, list) or not all(
+            isinstance(entity_id, str) for entity_id in entities
+        ):
+            self.last_soc_load_actuation_error = "SOC load entities are invalid"
+            return
+        if unsupported := [
+            entity_id
+            for entity_id in entities
+            if entity_id.partition(".")[0] not in SOC_LOAD_DOMAINS
+        ]:
+            self.last_soc_load_actuation_error = (
+                f"Unsupported SOC load entities: {', '.join(unsupported)}"
+            )
+            return
+
+        try:
+            soc = self._numeric_state(self.entry.data[CONF_BATTERY_SOC])
+            on_threshold = float(
+                self.entry.options.get(
+                    CONF_SOC_LOAD_ON_THRESHOLD, DEFAULT_SOC_LOAD_ON_THRESHOLD
+                )
+            )
+            off_threshold = float(
+                self.entry.options.get(
+                    CONF_SOC_LOAD_OFF_THRESHOLD, DEFAULT_SOC_LOAD_OFF_THRESHOLD
+                )
+            )
+            if off_threshold > on_threshold:
+                raise ValueError("SOC load off threshold must not exceed on threshold")
+            desired_on = True if soc >= on_threshold else False if soc <= off_threshold else None
+            if desired_on is None:
+                self.last_soc_load_actuation_error = None
+                return
+            targets = [
+                entity_id
+                for entity_id in entities
+                if (state := self.hass.states.get(entity_id)) is not None
+                and (state.state != "off") != desired_on
+            ]
+            if not targets:
+                self.last_soc_load_actuation_error = None
+                return
+            await self.hass.services.async_call(
+                "homeassistant",
+                "turn_on" if desired_on else "turn_off",
+                {ATTR_ENTITY_ID: targets},
+                blocking=True,
+            )
+            self.last_soc_load_actuation_error = None
+        except (HomeAssistantError, KeyError, TypeError, ValueError) as err:
+            self.last_soc_load_actuation_error = str(err)
+            _LOGGER.error("Unable to apply GridPilot SOC load control: %s", err)
 
     async def _async_write_ev_current(
         self, requested: float, *, force: bool = False
@@ -963,6 +1033,11 @@ class GridPilotController:
                 "last_applied_current": self.last_applied_ev_current,
                 "last_error": self.last_ev_actuation_error,
                 "pause_pending": self._ev_requires_pause,
+            },
+            "soc_load_actuation": {
+                "enabled": self._soc_load_actuation_enabled,
+                "entities": self.entry.options.get(CONF_SOC_LOAD_ENTITIES, []),
+                "last_error": self.last_soc_load_actuation_error,
             },
             "shadow_mode": not self.actuation_enabled,
             "ev_shadow_mode": not self.ev_actuation_enabled,

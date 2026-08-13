@@ -10,15 +10,13 @@ from homeassistant.helpers import config_validation as cv
 from .calculations import normalize_power
 from .const import (
     CONF_CHARGE_SOC,
-    CONF_EV_BATTERY_MODE,
     CONF_EV_OVERRIDE,
+    CONF_GRIDPILOT_EV_MODE,
     CONF_MAX_GRID_POWER,
-    CONF_MINIMUM_CHARGE_POWER,
     CONF_MINIMUM_SOC,
     CONF_NORMAL_SOC,
     DEFAULT_CHARGE_SOC,
-    DEFAULT_EV_BATTERY_MODE,
-    DEFAULT_MINIMUM_CHARGE_POWER,
+    DEFAULT_EV_MODE,
     VERSION,
 )
 from .const import DOMAIN as DOMAIN
@@ -70,7 +68,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) ->
     from .runtime import GridPilotRuntime
 
     await _async_setup_frontend(hass)
-    platforms = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.NUMBER]
+    platforms = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.NUMBER, Platform.SELECT]
     controller = GridPilotController(hass, entry)
     entry.runtime_data = GridPilotRuntime(controller=controller)
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
@@ -82,7 +80,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) ->
 
 async def async_migrate_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) -> bool:
     """Migrate legacy control parameters and SOC thresholds."""
-    if entry.version > 6:
+    if entry.version > 10:
         return False
 
     data = dict(entry.data)
@@ -102,10 +100,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) 
         else:
             data.pop(CONF_MAX_GRID_POWER, None)
 
-        defaults = {
-            CONF_CHARGE_SOC: DEFAULT_CHARGE_SOC,
-            CONF_MINIMUM_CHARGE_POWER: DEFAULT_MINIMUM_CHARGE_POWER,
-        }
+        defaults = {CONF_CHARGE_SOC: DEFAULT_CHARGE_SOC}
         for key, value in defaults.items():
             options.setdefault(key, value)
 
@@ -125,8 +120,29 @@ async def async_migrate_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) 
 
     if version == 5:
         options.pop(CONF_EV_OVERRIDE, None)
-        options.setdefault(CONF_EV_BATTERY_MODE, DEFAULT_EV_BATTERY_MODE)
         version = 6
+
+    if version == 6:
+        version = 7
+
+    if version == 7:
+        options.pop("minimum_charge_power", None)
+        version = 8
+
+    if version == 8:
+        for key in (
+            "ev_pv_mode",
+            "ev_manual_mode",
+            "ev_battery_mode",
+            "ev_disconnected_state",
+        ):
+            options.pop(key, None)
+        version = 9
+
+    if version == 9:
+        options.pop("ev_mode", None)
+        options.setdefault(CONF_GRIDPILOT_EV_MODE, DEFAULT_EV_MODE)
+        version = 10
 
     if version != entry.version or data != entry.data or options != entry.options:
         hass.config_entries.async_update_entry(
@@ -160,7 +176,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) -
     if not await entry.runtime_data.controller.async_shutdown():
         return False
     return await hass.config_entries.async_unload_platforms(
-        entry, [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.NUMBER]
+        entry, [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.NUMBER, Platform.SELECT]
     )
 
 

@@ -61,10 +61,6 @@
           "ev_battery_time_to_go": "Battery time to go (optional)",
           "ev_battery_target_time": "Battery-to-EV target time (optional)",
           "battery_charge_positive": "Positive battery power means charging",
-          "ev_pv_mode": "PV charging mode value",
-          "ev_manual_mode": "Manual charging mode value",
-          "ev_battery_mode": "Battery-to-EV charging mode value",
-          "ev_disconnected_state": "Disconnected state value",
           "ev_priority": "PV priority for EV",
           "ev_max_current": "Maximum EV current",
           "pv_safety_margin": "PV safety margin",
@@ -86,10 +82,6 @@
           "ev_battery_time_to_go": "Duration sensor in seconds used to pace battery discharge.",
           "ev_battery_target_time": "Input datetime containing the reserve-SOC deadline. An expired deadline is rolled forward daily.",
           "battery_charge_positive": "Enable when positive battery power means charging; disable when negative battery power means charging.",
-          "ev_pv_mode": "Exact charging-mode state in which GridPilot may control PV charging.",
-          "ev_manual_mode": "Exact charging-mode state in which GridPilot follows the manual-current helper.",
-          "ev_battery_mode": "Exact charging-mode state in which GridPilot may discharge the home battery into the EV.",
-          "ev_disconnected_state": "Exact connection-state value meaning no EV is connected.",
           "ev_priority": "Share of available PV assigned to the EV while the home battery is below 98%.",
           "ev_max_current": "Maximum current GridPilot may request. Default: 16 A.",
           "pv_safety_margin": "Power withheld from EV charging to reduce accidental grid import.",
@@ -102,20 +94,27 @@
         "data": {
           "max_grid_power": "Maximum grid import",
           "charge_soc": "SOC for full home-load compensation",
-          "minimum_charge_power": "Minimum charging power",
-          "enable_actuation": "Enable active battery control"
+          "enable_actuation": "Enable active battery control",
+          "soc_load_entities": "SOC-controlled devices (optional)",
+          "soc_load_on_threshold": "SOC to turn devices on",
+          "soc_load_off_threshold": "SOC to turn devices off",
+          "enable_soc_load_actuation": "Enable SOC-controlled devices"
         },
         "data_description": {
           "max_grid_power": "Positive maximum permitted grid import in watts. This fixed value replaces the need for a separate helper. Default: 2900 W.",
           "charge_soc": "At this SOC, the calculated setpoint equals the current home load. Maximum charging starts 5 percentage points below it and normal battery operation starts 5 percentage points above it. Default: 15%.",
-          "minimum_charge_power": "Minimum extra charging power requested below the charge threshold, before applying the maximum grid-power limit. Default: 300 W.",
-          "enable_actuation": "Danger: enable only after every other controller writing to the grid setpoint has been disabled. Invalid measurements and unloads reset the setpoint to 0 W. Default: off."
+          "enable_actuation": "Danger: enable only after every other controller writing to the grid setpoint has been disabled. Invalid measurements and unloads reset the setpoint to 0 W. Default: off.",
+          "soc_load_entities": "Switch and climate entities that GridPilot may turn on and off based on the home-battery SOC.",
+          "soc_load_on_threshold": "Turn the selected devices on at or above this home-battery SOC.",
+          "soc_load_off_threshold": "Turn the selected devices off at or below this home-battery SOC. Keep this lower than the on threshold to avoid switching repeatedly.",
+          "enable_soc_load_actuation": "Danger: GridPilot will actively turn the selected devices on and off. Default: off."
         }
       }
     },
     "error": {
       "load_entities_required": "Select one total load sensor or all three phase sensors",
-      "mode_values_must_differ": "PV and manual charging mode values must differ"
+      "mode_values_must_differ": "PV and manual charging mode values must differ",
+      "soc_load_threshold_order": "The off threshold must not exceed the on threshold"
     },
     "abort": {
       "already_configured": "GridPilot is already configured"
@@ -129,14 +128,20 @@
         "data": {
           "max_grid_power": "Maximum grid import",
           "charge_soc": "SOC for full home-load compensation",
-          "minimum_charge_power": "Minimum charging power",
-          "enable_actuation": "Enable active battery control"
+          "enable_actuation": "Enable active battery control",
+          "soc_load_entities": "SOC-controlled devices (optional)",
+          "soc_load_on_threshold": "SOC to turn devices on",
+          "soc_load_off_threshold": "SOC to turn devices off",
+          "enable_soc_load_actuation": "Enable SOC-controlled devices"
         },
         "data_description": {
           "max_grid_power": "Positive maximum permitted grid import in watts, stored inside GridPilot. Default: 2900 W.",
           "charge_soc": "At this SOC, the calculated setpoint equals the current home load. Maximum charging starts 5 percentage points below it and normal battery operation starts 5 percentage points above it. Default: 15%.",
-          "minimum_charge_power": "Minimum extra charging power requested below the charge threshold, before applying the maximum grid-power limit. Default: 300 W.",
-          "enable_actuation": "Danger: enable only after every other controller writing to the grid setpoint has been disabled. Invalid measurements and unloads reset the setpoint to 0 W. Default: off."
+          "enable_actuation": "Danger: enable only after every other controller writing to the grid setpoint has been disabled. Invalid measurements and unloads reset the setpoint to 0 W. Default: off.",
+          "soc_load_entities": "Switch and climate entities that GridPilot may turn on and off based on the home-battery SOC.",
+          "soc_load_on_threshold": "Turn the selected devices on at or above this home-battery SOC.",
+          "soc_load_off_threshold": "Turn the selected devices off at or below this home-battery SOC. Keep this lower than the on threshold to avoid switching repeatedly.",
+          "enable_soc_load_actuation": "Danger: GridPilot will actively turn the selected devices on and off. Default: off."
         }
       },
       "ev": {
@@ -158,10 +163,6 @@
           "ev_battery_time_to_go": "Battery time to go (optional)",
           "ev_battery_target_time": "Battery-to-EV target time (optional)",
           "battery_charge_positive": "Positive battery power means charging",
-          "ev_pv_mode": "PV charging mode value",
-          "ev_manual_mode": "Manual charging mode value",
-          "ev_battery_mode": "Battery-to-EV charging mode value",
-          "ev_disconnected_state": "Disconnected state value",
           "ev_priority": "PV priority for EV",
           "ev_max_current": "Maximum EV current",
           "pv_safety_margin": "PV safety margin",
@@ -183,10 +184,6 @@
           "ev_battery_time_to_go": "Duration sensor in seconds used to pace battery discharge.",
           "ev_battery_target_time": "Input datetime containing the reserve-SOC deadline. An expired deadline is rolled forward daily.",
           "battery_charge_positive": "Enable when positive battery power means charging; disable when negative battery power means charging.",
-          "ev_pv_mode": "Exact charging-mode state in which GridPilot may control PV charging.",
-          "ev_manual_mode": "Exact charging-mode state in which GridPilot follows the manual-current helper.",
-          "ev_battery_mode": "Exact charging-mode state in which GridPilot may discharge the home battery into the EV.",
-          "ev_disconnected_state": "Exact connection-state value meaning no EV is connected.",
           "ev_priority": "Share of available PV assigned to the EV while the home battery is below 98%.",
           "ev_max_current": "Maximum current GridPilot may request. Default: 16 A.",
           "pv_safety_margin": "Power withheld from EV charging to reduce accidental grid import.",
@@ -195,7 +192,8 @@
       }
     },
     "error": {
-      "mode_values_must_differ": "PV, manual and battery-to-EV charging mode values must differ"
+      "mode_values_must_differ": "PV, manual and battery-to-EV charging mode values must differ",
+      "soc_load_threshold_order": "The off threshold must not exceed the on threshold"
     }
   },
   "selector": {
@@ -210,6 +208,11 @@
     "number": {
       "ev_priority": {
         "name": "EV priority"
+      }
+    },
+    "select": {
+      "ev_mode": {
+        "name": "EV charging mode"
       }
     },
     "sensor": {

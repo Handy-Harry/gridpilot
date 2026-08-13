@@ -18,7 +18,7 @@ from .models import ControlDecision
 
 @dataclass(frozen=True, slots=True)
 class BatteryCurve:
-    """Configurable battery control curve."""
+    """Battery control curve derived from the maximum grid power."""
 
     charge_soc: float
     minimum_charge_power: float

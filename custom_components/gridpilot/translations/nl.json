@@ -61,10 +61,6 @@
           "ev_battery_time_to_go": "Resterende batterijtijd (optioneel)",
           "ev_battery_target_time": "Doeltijd batterij-naar-EV (optioneel)",
           "battery_charge_positive": "Positief batterijvermogen betekent laden",
-          "ev_pv_mode": "Waarde voor PV-laadmodus",
-          "ev_manual_mode": "Waarde voor handmatige laadmodus",
-          "ev_battery_mode": "Waarde voor batterij-naar-EV-laadmodus",
-          "ev_disconnected_state": "Waarde voor niet verbonden",
           "ev_priority": "PV-prioriteit voor EV",
           "ev_max_current": "Maximale EV-stroom",
           "pv_safety_margin": "PV-veiligheidsmarge",
@@ -86,10 +82,6 @@
           "ev_battery_time_to_go": "Duursensor in seconden waarmee de batterijontlading wordt gestuurd.",
           "ev_battery_target_time": "Datum/tijd-invoer met de deadline voor de reserve-SOC. Een verstreken deadline schuift dagelijks door.",
           "battery_charge_positive": "Schakel in wanneer positief batterijvermogen laden betekent; schakel uit wanneer negatief batterijvermogen laden betekent.",
-          "ev_pv_mode": "Exacte laadmodusstatus waarin GridPilot PV-laden mag regelen.",
-          "ev_manual_mode": "Exacte laadmodusstatus waarin GridPilot de helper voor handmatige stroom volgt.",
-          "ev_battery_mode": "Exacte laadmodusstatus waarin GridPilot de thuisbatterij naar de EV mag ontladen.",
-          "ev_disconnected_state": "Exacte verbindingsstatus die betekent dat geen EV verbonden is.",
           "ev_priority": "Aandeel van beschikbare PV voor de EV zolang de thuisbatterij onder 98% blijft.",
           "ev_max_current": "Maximale stroom die GridPilot mag vragen. Standaard: 16 A.",
           "pv_safety_margin": "Vermogen dat niet voor EV-laden wordt gebruikt om onbedoelde netafname te beperken.",
@@ -102,20 +94,27 @@
         "data": {
           "max_grid_power": "Maximale netafname",
           "charge_soc": "SOC voor volledige compensatie van het huisverbruik",
-          "minimum_charge_power": "Minimaal laadvermogen",
-          "enable_actuation": "Actieve batterijsturing inschakelen"
+          "enable_actuation": "Actieve batterijsturing inschakelen",
+          "soc_load_entities": "SOC-gestuurde apparaten (optioneel)",
+          "soc_load_on_threshold": "SOC om apparaten in te schakelen",
+          "soc_load_off_threshold": "SOC om apparaten uit te schakelen",
+          "enable_soc_load_actuation": "SOC-gestuurde apparaten inschakelen"
         },
         "data_description": {
           "max_grid_power": "Positieve maximaal toegestane netafname in watt. Deze vaste waarde vervangt een afzonderlijke helper. Standaard: 2900 W.",
           "charge_soc": "Op deze SOC is het berekende setpoint gelijk aan het actuele huisverbruik. Maximaal bijladen start 5 procentpunt lager en normale batterijwerking start 5 procentpunt hoger. Standaard: 15%.",
-          "minimum_charge_power": "Minimaal extra laadvermogen onder de laadgrens, voordat de limiet voor maximale netafname wordt toegepast. Standaard: 300 W.",
-          "enable_actuation": "Gevaar: schakel dit alleen in nadat elke andere regeling die naar het netsetpoint schrijft is uitgeschakeld. Ongeldige meetwaarden en ontladen van de integratie zetten het setpoint terug op 0 W. Standaard: uit."
+          "enable_actuation": "Gevaar: schakel dit alleen in nadat elke andere regeling die naar het netsetpoint schrijft is uitgeschakeld. Ongeldige meetwaarden en ontladen van de integratie zetten het setpoint terug op 0 W. Standaard: uit.",
+          "soc_load_entities": "Schakel- en klimaatentiteiten die GridPilot op basis van de SOC van de thuisbatterij mag in- en uitschakelen.",
+          "soc_load_on_threshold": "Schakel de geselecteerde apparaten in bij of boven deze SOC van de thuisbatterij.",
+          "soc_load_off_threshold": "Schakel de geselecteerde apparaten uit bij of onder deze SOC van de thuisbatterij. Houd deze waarde lager dan de inschakeldrempel om pendelen te voorkomen.",
+          "enable_soc_load_actuation": "Gevaar: GridPilot schakelt de geselecteerde apparaten actief in en uit. Standaard: uit."
         }
       }
     },
     "error": {
       "load_entities_required": "Selecteer één totale verbruikssensor of alle drie de fasesensoren",
-      "mode_values_must_differ": "De waarden voor PV-, handmatige en batterij-naar-EV-laadmodus moeten verschillen"
+      "mode_values_must_differ": "De waarden voor PV-, handmatige en batterij-naar-EV-laadmodus moeten verschillen",
+      "soc_load_threshold_order": "De uitschakeldrempel mag niet hoger zijn dan de inschakeldrempel"
     },
     "abort": {"already_configured": "GridPilot is al geconfigureerd"}
   },
@@ -127,14 +126,20 @@
         "data": {
           "max_grid_power": "Maximale netafname",
           "charge_soc": "SOC voor volledige compensatie van het huisverbruik",
-          "minimum_charge_power": "Minimaal laadvermogen",
-          "enable_actuation": "Actieve batterijsturing inschakelen"
+          "enable_actuation": "Actieve batterijsturing inschakelen",
+          "soc_load_entities": "SOC-gestuurde apparaten (optioneel)",
+          "soc_load_on_threshold": "SOC om apparaten in te schakelen",
+          "soc_load_off_threshold": "SOC om apparaten uit te schakelen",
+          "enable_soc_load_actuation": "SOC-gestuurde apparaten inschakelen"
         },
         "data_description": {
           "max_grid_power": "Positieve maximaal toegestane netafname in watt, intern opgeslagen in GridPilot. Standaard: 2900 W.",
           "charge_soc": "Op deze SOC is het berekende setpoint gelijk aan het actuele huisverbruik. Maximaal bijladen start 5 procentpunt lager en normale batterijwerking start 5 procentpunt hoger. Standaard: 15%.",
-          "minimum_charge_power": "Minimaal extra laadvermogen onder de laadgrens, voordat de limiet voor maximale netafname wordt toegepast. Standaard: 300 W.",
-          "enable_actuation": "Gevaar: schakel dit alleen in nadat elke andere regeling die naar het netsetpoint schrijft is uitgeschakeld. Ongeldige meetwaarden en ontladen van de integratie zetten het setpoint terug op 0 W. Standaard: uit."
+          "enable_actuation": "Gevaar: schakel dit alleen in nadat elke andere regeling die naar het netsetpoint schrijft is uitgeschakeld. Ongeldige meetwaarden en ontladen van de integratie zetten het setpoint terug op 0 W. Standaard: uit.",
+          "soc_load_entities": "Schakel- en klimaatentiteiten die GridPilot op basis van de SOC van de thuisbatterij mag in- en uitschakelen.",
+          "soc_load_on_threshold": "Schakel de geselecteerde apparaten in bij of boven deze SOC van de thuisbatterij.",
+          "soc_load_off_threshold": "Schakel de geselecteerde apparaten uit bij of onder deze SOC van de thuisbatterij. Houd deze waarde lager dan de inschakeldrempel om pendelen te voorkomen.",
+          "enable_soc_load_actuation": "Gevaar: GridPilot schakelt de geselecteerde apparaten actief in en uit. Standaard: uit."
         }
       },
       "ev": {
@@ -156,10 +161,6 @@
           "ev_battery_time_to_go": "Resterende batterijtijd (optioneel)",
           "ev_battery_target_time": "Doeltijd batterij-naar-EV (optioneel)",
           "battery_charge_positive": "Positief batterijvermogen betekent laden",
-          "ev_pv_mode": "Waarde voor PV-laadmodus",
-          "ev_manual_mode": "Waarde voor handmatige laadmodus",
-          "ev_battery_mode": "Waarde voor batterij-naar-EV-laadmodus",
-          "ev_disconnected_state": "Waarde voor niet verbonden",
           "ev_priority": "PV-prioriteit voor EV",
           "ev_max_current": "Maximale EV-stroom",
           "pv_safety_margin": "PV-veiligheidsmarge",
@@ -181,10 +182,6 @@
           "ev_battery_time_to_go": "Duursensor in seconden waarmee de batterijontlading wordt gestuurd.",
           "ev_battery_target_time": "Datum/tijd-invoer met de deadline voor de reserve-SOC. Een verstreken deadline schuift dagelijks door.",
           "battery_charge_positive": "Schakel in wanneer positief batterijvermogen laden betekent; schakel uit wanneer negatief batterijvermogen laden betekent.",
-          "ev_pv_mode": "Exacte laadmodusstatus waarin GridPilot PV-laden mag regelen.",
-          "ev_manual_mode": "Exacte laadmodusstatus waarin GridPilot de helper voor handmatige stroom volgt.",
-          "ev_battery_mode": "Exacte laadmodusstatus waarin GridPilot de thuisbatterij naar de EV mag ontladen.",
-          "ev_disconnected_state": "Exacte verbindingsstatus die betekent dat geen EV verbonden is.",
           "ev_priority": "Aandeel van beschikbare PV voor de EV zolang de thuisbatterij onder 98% blijft.",
           "ev_max_current": "Maximale stroom die GridPilot mag vragen. Standaard: 16 A.",
           "pv_safety_margin": "Vermogen dat niet voor EV-laden wordt gebruikt om onbedoelde netafname te beperken.",
@@ -193,7 +190,8 @@
       }
     },
     "error": {
-      "mode_values_must_differ": "De waarden voor PV- en handmatige laadmodus moeten verschillen"
+      "mode_values_must_differ": "De waarden voor PV- en handmatige laadmodus moeten verschillen",
+      "soc_load_threshold_order": "De uitschakeldrempel mag niet hoger zijn dan de inschakeldrempel"
     }
   },
   "selector": {
@@ -205,6 +203,11 @@
     "number": {
       "ev_priority": {
         "name": "PV-prioriteit EV"
+      }
+    },
+    "select": {
+      "ev_mode": {
+        "name": "EV-laadmodus"
       }
     },
     "sensor": {

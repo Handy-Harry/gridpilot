@@ -22,14 +22,10 @@ from .const import (
     CONF_BATTERY_SOC,
     CONF_CHARGE_SOC,
     CONF_EV_BATTERY_MIN_SOC,
-    CONF_EV_BATTERY_MODE,
     CONF_EV_CURRENT_LIMIT,
     CONF_EV_MANUAL_CURRENT,
-    CONF_EV_MANUAL_MODE,
-    CONF_EV_MODE,
     CONF_EV_PHASE_MODE,
     CONF_EV_POWER,
-    CONF_EV_PV_MODE,
     CONF_EV_VEHICLE_SOC,
     CONF_GRID_SETPOINT,
     DEFAULT_BATTERY_CHARGE_POSITIVE,
@@ -184,9 +180,7 @@ def _ev_cards(
 ) -> list[dict[str, Any]]:
     """Build EV cards when EV control is configured."""
     options = entry.options
-    if not options.get(CONF_EV_MODE):
-        return []
-
+    ev_mode = _gridpilot_entity(hass, entry, "select", "ev_mode")
     strategy = _gridpilot_entity(hass, entry, "sensor", "ev_strategy")
     operating_mode = _gridpilot_entity(hass, entry, "sensor", "ev_operating_mode")
     reason = _gridpilot_entity(hass, entry, "sensor", "ev_control_reason")
@@ -221,7 +215,7 @@ def _ev_cards(
         [
         {
             "type": "tile",
-            "entity": options[CONF_EV_MODE],
+            "entity": ev_mode,
             "name": "Laadmodus kiezen",
             "icon": "mdi:ev-station",
             "features": [{"type": "select-options"}],
@@ -231,8 +225,8 @@ def _ev_cards(
             "conditions": [
                 {
                     "condition": "state",
-                    "entity": options[CONF_EV_MODE],
-                    "state": options.get(CONF_EV_PV_MODE, DEFAULT_EV_PV_MODE),
+                    "entity": ev_mode,
+                    "state": DEFAULT_EV_PV_MODE,
                 }
             ],
             "card": {
@@ -280,10 +274,8 @@ def _ev_cards(
                 "conditions": [
                     {
                         "condition": "state",
-                        "entity": options[CONF_EV_MODE],
-                        "state": options.get(
-                            CONF_EV_MANUAL_MODE, DEFAULT_EV_MANUAL_MODE
-                        ),
+                        "entity": ev_mode,
+                        "state": DEFAULT_EV_MANUAL_MODE,
                     }
                 ],
                 "card": {
@@ -301,10 +293,8 @@ def _ev_cards(
                 "conditions": [
                     {
                         "condition": "state",
-                        "entity": options[CONF_EV_MODE],
-                        "state": options.get(
-                            CONF_EV_BATTERY_MODE, DEFAULT_EV_BATTERY_MODE
-                        ),
+                        "entity": ev_mode,
+                        "state": DEFAULT_EV_BATTERY_MODE,
                     }
                 ],
                 "card": {
@@ -334,7 +324,7 @@ def _ev_cards(
             {
                 "type": "markdown",
                 "content": _ev_markdown(
-                    options[CONF_EV_MODE],
+                    ev_mode,
                     strategy,
                     operating_mode,
                     reason,

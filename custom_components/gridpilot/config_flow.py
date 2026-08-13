@@ -18,22 +18,17 @@ from .const import (
     CONF_ENABLE_ACTUATION,
     CONF_ENABLE_EV_ACTUATION,
     CONF_EV_BATTERY_MIN_SOC,
-    CONF_EV_BATTERY_MODE,
     CONF_EV_BATTERY_SOC,
     CONF_EV_BATTERY_TARGET_TIME,
     CONF_EV_BATTERY_TIME_TO_GO,
     CONF_EV_CONNECTION_STATE,
     CONF_EV_CURRENT_FEEDBACK,
     CONF_EV_CURRENT_LIMIT,
-    CONF_EV_DISCONNECTED_STATE,
     CONF_EV_MANUAL_CURRENT,
-    CONF_EV_MANUAL_MODE,
     CONF_EV_MAX_CURRENT,
-    CONF_EV_MODE,
     CONF_EV_PHASE_MODE,
     CONF_EV_POWER,
     CONF_EV_PRIORITY,
-    CONF_EV_PV_MODE,
     CONF_EV_VEHICLE_SOC,
     CONF_EV_VOLTAGE,
     CONF_GRID_POWER,
@@ -43,25 +38,27 @@ from .const import (
     CONF_HOME_LOAD_L2,
     CONF_HOME_LOAD_L3,
     CONF_MAX_GRID_POWER,
-    CONF_MINIMUM_CHARGE_POWER,
     CONF_PROFILE,
     CONF_PV_SAFETY_MARGIN,
+    CONF_SOC_LOAD_ENTITIES,
+    CONF_SOC_LOAD_OFF_THRESHOLD,
+    CONF_SOC_LOAD_ON_THRESHOLD,
+    CONF_ENABLE_SOC_LOAD_ACTUATION,
     DEFAULT_BATTERY_CHARGE_POSITIVE,
     DEFAULT_CHARGE_SOC,
     DEFAULT_ENABLE_ACTUATION,
     DEFAULT_ENABLE_EV_ACTUATION,
-    DEFAULT_EV_BATTERY_MODE,
-    DEFAULT_EV_DISCONNECTED_STATE,
-    DEFAULT_EV_MANUAL_MODE,
     DEFAULT_EV_MAX_CURRENT,
     DEFAULT_EV_PRIORITY,
-    DEFAULT_EV_PV_MODE,
     DEFAULT_MAX_GRID_POWER,
-    DEFAULT_MINIMUM_CHARGE_POWER,
     DEFAULT_PV_SAFETY_MARGIN,
+    DEFAULT_SOC_LOAD_OFF_THRESHOLD,
+    DEFAULT_SOC_LOAD_ON_THRESHOLD,
+    DEFAULT_ENABLE_SOC_LOAD_ACTUATION,
     DOMAIN,
     PROFILE_GENERIC,
     PROFILE_VICTRON,
+    SOC_LOAD_DOMAINS,
 )
 
 
@@ -73,10 +70,20 @@ def _entity_selector(domains: list[str]) -> selector.EntitySelector:
     )
 
 
+def _multiple_entity_selector(domains: list[str]) -> selector.EntitySelector:
+    """Build an entity selector that accepts multiple flexible loads."""
+    return selector.EntitySelector(
+        selector.EntitySelectorConfig(
+            multiple=True,
+            filter=selector.EntityFilterSelectorConfig(domain=domains),
+        )
+    )
+
+
 class GridPilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle the GridPilot setup flow."""
 
-    VERSION = 6
+    VERSION = 10
     MINOR_VERSION = 0
 
     def __init__(self) -> None:
@@ -206,15 +213,19 @@ class GridPilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Collect the initial control parameters."""
+        errors: dict[str, str] = {}
         if user_input is not None:
-            self._options.update(user_input)
-            return self.async_create_entry(
-                title="GridPilot", data=self._data, options=self._options
-            )
+            errors = _soc_load_options_errors(user_input)
+            if not errors:
+                self._options.update(user_input)
+                return self.async_create_entry(
+                    title="GridPilot", data=self._data, options=self._options
+                )
 
         return self.async_show_form(
             step_id="control",
             data_schema=_control_options_schema({}),
+            errors=errors,
         )
 
     @staticmethod
@@ -237,12 +248,18 @@ class GridPilotOptionsFlow(config_entries.OptionsFlow):
     ) -> ConfigFlowResult:
         """Edit SOC and charge-power options."""
         if user_input is not None:
-            self._options.update(user_input)
-            return await self.async_step_ev()
+            errors = _soc_load_options_errors(user_input)
+            if not errors:
+                self._options.update(user_input)
+                return await self.async_step_ev()
+        else:
+            self._options = dict(self.config_entry.options)
+            errors = {}
 
         return self.async_show_form(
             step_id="init",
             data_schema=_control_options_schema(self.config_entry.options),
+            errors=errors,
         )
 
     async def async_step_ev(
@@ -287,22 +304,42 @@ def _control_options_schema(current: dict[str, Any]) -> vol.Schema:
                 )
             ),
             vol.Required(
-                CONF_MINIMUM_CHARGE_POWER,
-                default=current.get(
-                    CONF_MINIMUM_CHARGE_POWER, DEFAULT_MINIMUM_CHARGE_POWER
-                ),
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=0,
-                    max=10_000,
-                    step=10,
-                    unit_of_measurement="W",
-                )
-            ),
-            vol.Required(
                 CONF_ENABLE_ACTUATION,
                 default=current.get(CONF_ENABLE_ACTUATION, DEFAULT_ENABLE_ACTUATION),
             ): selector.BooleanSelector(),
+            vol.Required(
+                CONF_ENABLE_SOC_LOAD_ACTUATION,
+                default=current.get(
+                    CONF_ENABLE_SOC_LOAD_ACTUATION,
+                    DEFAULT_ENABLE_SOC_LOAD_ACTUATION,
+                ),
+            ): selector.BooleanSelector(),
+            vol.Optional(
+                CONF_SOC_LOAD_ENTITIES,
+                description={
+                    "suggested_value": current.get(CONF_SOC_LOAD_ENTITIES, [])
+                },
+            ): _multiple_entity_selector(sorted(SOC_LOAD_DOMAINS)),
+            vol.Required(
+                CONF_SOC_LOAD_ON_THRESHOLD,
+                default=current.get(
+                    CONF_SOC_LOAD_ON_THRESHOLD, DEFAULT_SOC_LOAD_ON_THRESHOLD
+                ),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=0, max=100, step=5, unit_of_measurement="%"
+                )
+            ),
+            vol.Required(
+                CONF_SOC_LOAD_OFF_THRESHOLD,
+                default=current.get(
+                    CONF_SOC_LOAD_OFF_THRESHOLD, DEFAULT_SOC_LOAD_OFF_THRESHOLD
+                ),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=0, max=100, step=5, unit_of_measurement="%"
+                )
+            ),
         }
     )
 
@@ -323,6 +360,15 @@ def _ev_options_schema(current: dict[str, Any]) -> vol.Schema:
 
     fields = dict(
         [
+            (
+                vol.Required(
+                    CONF_ENABLE_EV_ACTUATION,
+                    default=current.get(
+                        CONF_ENABLE_EV_ACTUATION, DEFAULT_ENABLE_EV_ACTUATION
+                    ),
+                ),
+                selector.BooleanSelector(),
+            ),
             optional_entity(CONF_GRID_POWER, ["sensor"]),
             optional_entity(CONF_EV_POWER, ["sensor"]),
             optional_entity(CONF_EV_VEHICLE_SOC, ["sensor"]),
@@ -331,7 +377,6 @@ def _ev_options_schema(current: dict[str, Any]) -> vol.Schema:
             optional_entity(CONF_EV_CURRENT_FEEDBACK, ["sensor", "number"]),
             optional_entity(CONF_EV_VOLTAGE, ["sensor"]),
             optional_entity(CONF_EV_PHASE_MODE, ["select", "sensor"]),
-            optional_entity(CONF_EV_MODE, ["input_select", "select"]),
             optional_entity(CONF_EV_MANUAL_CURRENT, ["input_number", "number"]),
             optional_entity(CONF_EV_BATTERY_SOC, ["sensor"]),
             optional_entity(CONF_EV_BATTERY_MIN_SOC, ["input_number", "number"]),
@@ -348,24 +393,6 @@ def _ev_options_schema(current: dict[str, Any]) -> vol.Schema:
                     DEFAULT_BATTERY_CHARGE_POSITIVE,
                 ),
             ): selector.BooleanSelector(),
-            vol.Required(
-                CONF_EV_PV_MODE,
-                default=current.get(CONF_EV_PV_MODE, DEFAULT_EV_PV_MODE),
-            ): selector.TextSelector(),
-            vol.Required(
-                CONF_EV_MANUAL_MODE,
-                default=current.get(CONF_EV_MANUAL_MODE, DEFAULT_EV_MANUAL_MODE),
-            ): selector.TextSelector(),
-            vol.Required(
-                CONF_EV_BATTERY_MODE,
-                default=current.get(CONF_EV_BATTERY_MODE, DEFAULT_EV_BATTERY_MODE),
-            ): selector.TextSelector(),
-            vol.Required(
-                CONF_EV_DISCONNECTED_STATE,
-                default=current.get(
-                    CONF_EV_DISCONNECTED_STATE, DEFAULT_EV_DISCONNECTED_STATE
-                ),
-            ): selector.TextSelector(),
             vol.Required(
                 CONF_EV_PRIORITY,
                 default=current.get(CONF_EV_PRIORITY, DEFAULT_EV_PRIORITY),
@@ -390,25 +417,21 @@ def _ev_options_schema(current: dict[str, Any]) -> vol.Schema:
                     min=0, max=2000, step=50, unit_of_measurement="W"
                 )
             ),
-            vol.Required(
-                CONF_ENABLE_EV_ACTUATION,
-                default=current.get(
-                    CONF_ENABLE_EV_ACTUATION, DEFAULT_ENABLE_EV_ACTUATION
-                ),
-            ): selector.BooleanSelector(),
         }
     )
     return vol.Schema(fields)
 
 
 def _ev_options_errors(options: dict[str, Any]) -> dict[str, str]:
-    """Validate relationships between EV options."""
-    modes = {
-        CONF_EV_PV_MODE: options.get(CONF_EV_PV_MODE),
-        CONF_EV_MANUAL_MODE: options.get(CONF_EV_MANUAL_MODE),
-        CONF_EV_BATTERY_MODE: options.get(CONF_EV_BATTERY_MODE),
-    }
-    values = [value for value in modes.values() if value is not None]
-    if len(values) != len(set(values)):
-        return {CONF_EV_BATTERY_MODE: "mode_values_must_differ"}
+    """Validate EV options."""
+    return {}
+
+
+def _soc_load_options_errors(options: dict[str, Any]) -> dict[str, str]:
+    """Validate the SOC-load hysteresis thresholds."""
+    if (
+        float(options[CONF_SOC_LOAD_OFF_THRESHOLD])
+        > float(options[CONF_SOC_LOAD_ON_THRESHOLD])
+    ):
+        return {CONF_SOC_LOAD_OFF_THRESHOLD: "soc_load_threshold_order"}
     return {}
