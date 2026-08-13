@@ -5,14 +5,14 @@ from typing import Final
 
 DOMAIN: Final = "gridpilot"
 NAME: Final = "GridPilot"
-VERSION: Final = "1.1.3"
+VERSION: Final = "1.2.0"
 
 PLATFORMS: Final = ["sensor", "binary_sensor", "number"]
 UPDATE_INTERVAL: Final = timedelta(minutes=1)
 MIN_ACTUATION_INTERVAL: Final = timedelta(seconds=10)
 EV_UPDATE_INTERVAL: Final = timedelta(seconds=10)
 EV_POWER_MEDIAN_WINDOW: Final = timedelta(seconds=45)
-EV_CURRENT_MEDIAN_WINDOW: Final = timedelta(minutes=5)
+EV_CURRENT_MEDIAN_WINDOW: Final = timedelta(minutes=2)
 EV_STOP_DELAY: Final = timedelta(minutes=5)
 EV_RESTART_DELAY: Final = timedelta(minutes=10)
 
@@ -87,8 +87,8 @@ EV_PAUSE_CURRENT: Final = 5.0
 EV_MIN_CURRENT: Final = 6.0
 EV_START_CURRENT: Final = 7.0
 EV_STOP_CURRENT: Final = 5.5
-EV_CURRENT_STEP: Final = 0.5
-EV_CURRENT_DEADBAND: Final = 0.75
+EV_CURRENT_STEP: Final = 0.1
+EV_CURRENT_DEADBAND: Final = 0.3
 BATTERY_FULL_SOC: Final = 98.0
 BATTERY_FULL_RELEASE_SOC: Final = 97.0
 EV_BATTERY_GRID_IMPORT_LIMIT: Final = 150.0

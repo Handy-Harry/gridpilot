@@ -249,7 +249,7 @@ def _ev_cards(
             "entity": entity_id,
             "name": name,
             "icon": icon,
-            "features": [feature],
+            "features": [feature] if feature else [],
         }
         for entity_id, name, icon, feature in (
             (
@@ -262,7 +262,11 @@ def _ev_cards(
                 manual_entities[1],
                 "Handmatige fasen",
                 "mdi:sine-wave",
-                {"type": "select-options"},
+                (
+                    {"type": "select-options"}
+                    if manual_entities[1] and manual_entities[1].startswith("select.")
+                    else None
+                ),
             ),
         )
         if entity_id
@@ -462,9 +466,6 @@ def _ev_markdown(
 } %}
 {% if selected_mode == 'Uit' %}
 De laadregeling is uit.
-{% elif selected_mode == 'Automatisch' and selected == 'none' %}
-De gekozen modus is **Automatisch**.
-Hiervoor is nog geen aparte GridPilot-regelstrategie actief.
 {% else %}
 GridPilot gebruikt **{{ strategy_labels.get(selected, selected_mode) }}**.
 {% endif %}

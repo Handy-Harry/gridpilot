@@ -104,7 +104,7 @@
           "max_grid_power": "Positive maximum permitted grid import in watts. This fixed value replaces the need for a separate helper. Default: 2900 W.",
           "charge_soc": "At this SOC, the calculated setpoint equals the current home load. Maximum charging starts 5 percentage points below it and normal battery operation starts 5 percentage points above it. Default: 15%.",
           "enable_actuation": "Danger: enable only after every other controller writing to the grid setpoint has been disabled. Invalid measurements and unloads reset the setpoint to 0 W. Default: off.",
-          "soc_load_entities": "Switch and climate entities that GridPilot may turn on and off based on the home-battery SOC.",
+          "soc_load_entities": "Switch, climate, light, fan, water heater, humidifier and media-player entities that GridPilot may turn on and off based on the home-battery SOC.",
           "soc_load_on_threshold": "Turn the selected devices on at or above this home-battery SOC.",
           "soc_load_off_threshold": "Turn the selected devices off at or below this home-battery SOC. Keep this lower than the on threshold to avoid switching repeatedly.",
           "enable_soc_load_actuation": "Danger: GridPilot will actively turn the selected devices on and off. Default: off."
@@ -138,7 +138,7 @@
           "max_grid_power": "Positive maximum permitted grid import in watts, stored inside GridPilot. Default: 2900 W.",
           "charge_soc": "At this SOC, the calculated setpoint equals the current home load. Maximum charging starts 5 percentage points below it and normal battery operation starts 5 percentage points above it. Default: 15%.",
           "enable_actuation": "Danger: enable only after every other controller writing to the grid setpoint has been disabled. Invalid measurements and unloads reset the setpoint to 0 W. Default: off.",
-          "soc_load_entities": "Switch and climate entities that GridPilot may turn on and off based on the home-battery SOC.",
+          "soc_load_entities": "Switch, climate, light, fan, water heater, humidifier and media-player entities that GridPilot may turn on and off based on the home-battery SOC.",
           "soc_load_on_threshold": "Turn the selected devices on at or above this home-battery SOC.",
           "soc_load_off_threshold": "Turn the selected devices off at or below this home-battery SOC. Keep this lower than the on threshold to avoid switching repeatedly.",
           "enable_soc_load_actuation": "Danger: GridPilot will actively turn the selected devices on and off. Default: off."

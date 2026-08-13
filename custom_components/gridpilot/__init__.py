@@ -10,6 +10,7 @@ from homeassistant.helpers import config_validation as cv
 from .calculations import normalize_power
 from .const import (
     CONF_CHARGE_SOC,
+    CONF_EV_PHASE_MODE,
     CONF_EV_OVERRIDE,
     CONF_GRIDPILOT_EV_MODE,
     CONF_MAX_GRID_POWER,
@@ -80,7 +81,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) ->
 
 async def async_migrate_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) -> bool:
     """Migrate legacy control parameters and SOC thresholds."""
-    if entry.version > 10:
+    if entry.version > 11:
         return False
 
     data = dict(entry.data)
@@ -143,6 +144,11 @@ async def async_migrate_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) 
         options.pop("ev_mode", None)
         options.setdefault(CONF_GRIDPILOT_EV_MODE, DEFAULT_EV_MODE)
         version = 10
+
+    if version == 10:
+        if options.get(CONF_EV_PHASE_MODE) == "sensor.alfen_charging_mode":
+            options[CONF_EV_PHASE_MODE] = "select.alfen_usable_phases1"
+        version = 11
 
     if version != entry.version or data != entry.data or options != entry.options:
         hass.config_entries.async_update_entry(

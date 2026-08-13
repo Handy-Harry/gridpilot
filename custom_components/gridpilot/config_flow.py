@@ -83,7 +83,7 @@ def _multiple_entity_selector(domains: list[str]) -> selector.EntitySelector:
 class GridPilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle the GridPilot setup flow."""
 
-    VERSION = 10
+    VERSION = 11
     MINOR_VERSION = 0
 
     def __init__(self) -> None:
@@ -406,7 +406,7 @@ def _ev_options_schema(current: dict[str, Any]) -> vol.Schema:
                 default=current.get(CONF_EV_MAX_CURRENT, DEFAULT_EV_MAX_CURRENT),
             ): selector.NumberSelector(
                 selector.NumberSelectorConfig(
-                    min=6, max=32, step=0.5, unit_of_measurement="A"
+                    min=6, max=32, step=0.1, unit_of_measurement="A"
                 )
             ),
             vol.Required(
