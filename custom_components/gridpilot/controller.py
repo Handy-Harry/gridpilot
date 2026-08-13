@@ -30,6 +30,7 @@ from .const import (
     CONF_CHARGE_SOC,
     CONF_ENABLE_ACTUATION,
     CONF_ENABLE_EV_ACTUATION,
+    CONF_ENABLE_SOC_LOAD_ACTUATION,
     CONF_EV_BATTERY_MIN_SOC,
     CONF_EV_BATTERY_SOC,
     CONF_EV_BATTERY_TARGET_TIME,
@@ -39,13 +40,13 @@ from .const import (
     CONF_EV_CURRENT_LIMIT,
     CONF_EV_MANUAL_CURRENT,
     CONF_EV_MAX_CURRENT,
-    CONF_GRIDPILOT_EV_MODE,
     CONF_EV_PHASE_MODE,
     CONF_EV_POWER,
     CONF_EV_PRIORITY,
     CONF_EV_VOLTAGE,
     CONF_GRID_POWER,
     CONF_GRID_SETPOINT,
+    CONF_GRIDPILOT_EV_MODE,
     CONF_HOME_LOAD,
     CONF_HOME_LOAD_L1,
     CONF_HOME_LOAD_L2,
@@ -55,24 +56,23 @@ from .const import (
     CONF_SOC_LOAD_ENTITIES,
     CONF_SOC_LOAD_OFF_THRESHOLD,
     CONF_SOC_LOAD_ON_THRESHOLD,
-    CONF_ENABLE_SOC_LOAD_ACTUATION,
     DEFAULT_BATTERY_CHARGE_POSITIVE,
     DEFAULT_CHARGE_SOC,
     DEFAULT_ENABLE_ACTUATION,
     DEFAULT_ENABLE_EV_ACTUATION,
+    DEFAULT_ENABLE_SOC_LOAD_ACTUATION,
     DEFAULT_EV_BATTERY_MODE,
     DEFAULT_EV_DISCONNECTED_STATE,
     DEFAULT_EV_MANUAL_MODE,
+    DEFAULT_EV_MAX_CURRENT,
     DEFAULT_EV_MODE,
     DEFAULT_EV_OFF_MODE,
-    DEFAULT_EV_MAX_CURRENT,
     DEFAULT_EV_PRIORITY,
     DEFAULT_EV_PV_MODE,
     DEFAULT_MAX_GRID_POWER,
     DEFAULT_PV_SAFETY_MARGIN,
     DEFAULT_SOC_LOAD_OFF_THRESHOLD,
     DEFAULT_SOC_LOAD_ON_THRESHOLD,
-    DEFAULT_ENABLE_SOC_LOAD_ACTUATION,
     EV_CURRENT_DEADBAND,
     EV_CURRENT_MEDIAN_WINDOW,
     EV_CURRENT_STEP,
@@ -98,8 +98,8 @@ from .const import (
     EV_UPDATE_INTERVAL,
     MIN_ACTUATION_INTERVAL,
     MODE_UNAVAILABLE,
-    UPDATE_INTERVAL,
     SOC_LOAD_DOMAINS,
+    UPDATE_INTERVAL,
 )
 from .ev_calculations import (
     calculate_battery_to_ev_decision,
@@ -712,8 +712,16 @@ class GridPilotController:
                 )
             )
             if off_threshold > on_threshold:
-                raise ValueError("SOC load off threshold must not exceed on threshold")
-            desired_on = True if soc >= on_threshold else False if soc <= off_threshold else None
+                raise ValueError(
+                    "SOC load off threshold must not exceed on threshold"
+                )
+            desired_on = (
+                True
+                if soc >= on_threshold
+                else False
+                if soc <= off_threshold
+                else None
+            )
             if desired_on is None:
                 self.last_soc_load_actuation_error = None
                 return

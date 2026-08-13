@@ -10,8 +10,8 @@ from homeassistant.helpers import config_validation as cv
 from .calculations import normalize_power
 from .const import (
     CONF_CHARGE_SOC,
-    CONF_EV_PHASE_MODE,
     CONF_EV_OVERRIDE,
+    CONF_EV_PHASE_MODE,
     CONF_GRIDPILOT_EV_MODE,
     CONF_MAX_GRID_POWER,
     CONF_MINIMUM_SOC,
@@ -69,7 +69,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) ->
     from .runtime import GridPilotRuntime
 
     await _async_setup_frontend(hass)
-    platforms = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.NUMBER, Platform.SELECT]
+    platforms = [
+        Platform.SENSOR,
+        Platform.BINARY_SENSOR,
+        Platform.NUMBER,
+        Platform.SELECT,
+    ]
     controller = GridPilotController(hass, entry)
     entry.runtime_data = GridPilotRuntime(controller=controller)
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
@@ -182,7 +187,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) -
     if not await entry.runtime_data.controller.async_shutdown():
         return False
     return await hass.config_entries.async_unload_platforms(
-        entry, [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.NUMBER, Platform.SELECT]
+        entry,
+        [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.NUMBER, Platform.SELECT],
     )
 
 
