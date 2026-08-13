@@ -17,7 +17,6 @@ from custom_components.gridpilot.const import (
     CONF_ENABLE_ACTUATION,
     CONF_ENABLE_EV_ACTUATION,
     CONF_EV_BATTERY_MIN_SOC,
-    CONF_EV_BATTERY_MODE,
     CONF_EV_BATTERY_SOC,
     CONF_EV_BATTERY_TARGET_TIME,
     CONF_EV_BATTERY_TIME_TO_GO,
@@ -25,16 +24,14 @@ from custom_components.gridpilot.const import (
     CONF_EV_CURRENT_FEEDBACK,
     CONF_EV_CURRENT_LIMIT,
     CONF_EV_MANUAL_CURRENT,
-    CONF_EV_MODE,
     CONF_EV_PHASE_MODE,
     CONF_EV_POWER,
-    CONF_EV_PV_MODE,
     CONF_EV_VOLTAGE,
     CONF_GRID_POWER,
     CONF_GRID_SETPOINT,
+    CONF_GRIDPILOT_EV_MODE,
     CONF_HOME_LOAD,
     CONF_MAX_GRID_POWER,
-    CONF_MINIMUM_CHARGE_POWER,
     DOMAIN,
 )
 from custom_components.gridpilot.controller import GridPilotController
@@ -55,7 +52,6 @@ def _entry(
     options = {
         CONF_MAX_GRID_POWER: 2900,
         CONF_CHARGE_SOC: 15,
-        CONF_MINIMUM_CHARGE_POWER: 300,
         CONF_ENABLE_ACTUATION: enable_actuation,
     }
     if partial_ev:
@@ -81,7 +77,6 @@ def _entry(
                 CONF_EV_CURRENT_LIMIT: "number.ev_current",
                 CONF_EV_VOLTAGE: "sensor.ev_voltage",
                 CONF_EV_PHASE_MODE: "select.ev_phases",
-                CONF_EV_MODE: "input_select.ev_mode",
             }
         )
         if current_feedback:
@@ -91,15 +86,13 @@ def _entry(
         if configure_battery_to_ev:
             options.update(
                 {
-                    CONF_EV_BATTERY_MODE: "Thuisbatterij naar EV",
                     CONF_EV_BATTERY_SOC: "sensor.secondary_battery_soc",
                     CONF_EV_BATTERY_MIN_SOC: "input_number.minimum_battery_soc",
                     CONF_EV_BATTERY_TIME_TO_GO: "sensor.battery_time_to_go",
                     CONF_EV_BATTERY_TARGET_TIME: "input_datetime.battery_target",
                 }
             )
-        if pv_mode is not None:
-            options[CONF_EV_PV_MODE] = pv_mode
+        options[CONF_GRIDPILOT_EV_MODE] = pv_mode or "PV laden"
     return MockConfigEntry(
         domain=DOMAIN,
         data={
@@ -138,7 +131,6 @@ def _set_ev_states(hass: HomeAssistant, *, mode: str = "PV laden") -> None:
     hass.states.async_set("sensor.ev_connection", "Connected")
     hass.states.async_set("sensor.ev_voltage", "230", {"unit_of_measurement": "V"})
     hass.states.async_set("select.ev_phases", "1 Phase")
-    hass.states.async_set("input_select.ev_mode", mode)
     hass.states.async_set(
         "number.ev_current",
         "5",
@@ -320,6 +312,7 @@ async def test_manual_ev_actuation_writes_configured_current(
             False,
             enable_ev_actuation=True,
             configure_manual=True,
+            pv_mode="Manueel",
         ),
     )
     await controller.async_refresh()
@@ -338,28 +331,14 @@ async def test_inactive_ev_mode_does_not_write(hass: HomeAssistant) -> None:
     calls: list[ServiceCall] = []
     hass.services.async_register("number", "set_value", calls.append)
 
-    controller = GridPilotController(hass, _entry(False, enable_ev_actuation=True))
+    controller = GridPilotController(
+        hass, _entry(False, enable_ev_actuation=True, pv_mode="Uit")
+    )
     await controller.async_refresh()
 
     assert controller.ev_decision.strategy == "none"
     assert controller.ev_decision.requested_current is None
     assert calls == []
-
-
-async def test_legacy_pv_mode_named_manual_keeps_pv_semantics(
-    hass: HomeAssistant,
-) -> None:
-    _set_valid_states(hass)
-    _set_ev_states(hass, mode="Manueel")
-    controller = GridPilotController(
-        hass,
-        _entry(False, configure_ev=True, pv_mode="Manueel"),
-    )
-
-    await controller.async_refresh()
-
-    assert controller.ev_decision.valid
-    assert controller.ev_decision.strategy == "pv"
 
 
 async def test_strategy_change_bypasses_normal_ev_rate_limit(
@@ -389,8 +368,8 @@ async def test_strategy_change_bypasses_normal_ev_rate_limit(
             "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
         },
     )
-    hass.states.async_set("input_select.ev_mode", "Manueel")
-    await controller.async_refresh()
+    controller.entry.add_to_hass(hass)
+    await controller.async_update_ev_mode("Manueel")
 
     assert [call.data["value"] for call in calls] == [6, 10]
 
@@ -409,11 +388,11 @@ async def test_strategy_change_starts_from_measured_current(
             False,
             enable_ev_actuation=True,
             configure_manual=True,
+            pv_mode="Manueel",
         ),
     )
 
     await controller.async_refresh()
-    hass.states.async_set("input_select.ev_mode", "PV laden")
     hass.states.async_set(
         "number.ev_current",
         "10",
@@ -423,10 +402,11 @@ async def test_strategy_change_starts_from_measured_current(
             "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
         },
     )
-    await controller.async_refresh()
+    controller.entry.add_to_hass(hass)
+    await controller.async_update_ev_mode("PV laden")
 
-    assert controller.ev_decision.requested_current == 9.5
-    assert [call.data["value"] for call in calls] == [10, 9.5]
+    assert controller.ev_decision.requested_current == 9.9
+    assert [call.data["value"] for call in calls] == [10, 9.9]
 
 
 async def test_battery_to_ev_toggle_does_not_override_pv_mode(
@@ -454,7 +434,7 @@ async def test_battery_to_ev_toggle_is_explicit_when_mode_is_not_pv_or_manual(
     _set_battery_to_ev_states(hass)
     controller = GridPilotController(
         hass,
-        _entry(False, configure_battery_to_ev=True),
+        _entry(False, configure_battery_to_ev=True, pv_mode="Thuisbatterij naar EV"),
     )
 
     await controller.async_refresh()
@@ -487,6 +467,7 @@ async def test_battery_to_ev_reserve_soc_forces_safe_pause(
             False,
             enable_ev_actuation=True,
             configure_battery_to_ev=True,
+            pv_mode="Thuisbatterij naar EV",
         ),
     )
 
@@ -523,8 +504,8 @@ async def test_battery_to_ev_handoff_preserves_measured_current(
 
     await controller.async_refresh()
     hass.states.async_set("input_boolean.battery_to_ev", "on")
-    hass.states.async_set("input_select.ev_mode", "Thuisbatterij naar EV")
-    await controller.async_refresh()
+    controller.entry.add_to_hass(hass)
+    await controller.async_update_ev_mode("Thuisbatterij naar EV")
 
     assert controller.ev_decision.strategy == "battery_to_ev"
     assert controller.ev_decision.requested_current == 16
@@ -538,12 +519,11 @@ async def test_battery_to_ev_handoff_to_pv_calculates_from_measured_current(
     _set_battery_to_ev_states(hass)
     controller = GridPilotController(
         hass,
-        _entry(False, configure_battery_to_ev=True),
+        _entry(False, configure_battery_to_ev=True, pv_mode="Thuisbatterij naar EV"),
     )
 
     await controller.async_refresh()
     hass.states.async_set("input_boolean.battery_to_ev", "off")
-    hass.states.async_set("input_select.ev_mode", "PV laden")
     hass.states.async_set(
         "sensor.battery_power", "0", {"unit_of_measurement": UnitOfPower.WATT}
     )
@@ -556,7 +536,8 @@ async def test_battery_to_ev_handoff_to_pv_calculates_from_measured_current(
             "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
         },
     )
-    await controller.async_refresh()
+    controller.entry.add_to_hass(hass)
+    await controller.async_update_ev_mode("PV laden")
 
     assert controller.ev_decision.strategy == "pv"
     assert controller.ev_decision.mode == "stop_delay"
@@ -577,6 +558,7 @@ async def test_battery_reserve_pause_bypasses_ev_rate_limit(
             False,
             enable_ev_actuation=True,
             configure_battery_to_ev=True,
+            pv_mode="Thuisbatterij naar EV",
         ),
     )
 

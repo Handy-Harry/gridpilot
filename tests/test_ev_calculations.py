@@ -113,13 +113,13 @@ def test_battery_to_ev_pauses_at_either_reserve_soc() -> None:
 @pytest.mark.parametrize(
     ("grid_power", "time_to_go", "expected"),
     [
-        (200, 75_600, 7.5),
-        (0, 100_000, 8.5),
-        (0, 50_000, 7.5),
+        (200, 75_600, 7.9),
+        (0, 100_000, 8.1),
+        (0, 50_000, 7.9),
         (0, 75_600, 8),
     ],
 )
-def test_battery_to_ev_adjusts_in_half_amp_steps(
+def test_battery_to_ev_adjusts_in_tenth_amp_steps(
     grid_power: float, time_to_go: float, expected: float
 ) -> None:
     decision = calculate_battery_to_ev_decision(

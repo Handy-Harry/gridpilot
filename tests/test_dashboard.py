@@ -12,7 +12,6 @@ from custom_components.gridpilot.const import (
     CONF_EV_BATTERY_MIN_SOC,
     CONF_EV_CURRENT_LIMIT,
     CONF_EV_MANUAL_CURRENT,
-    CONF_EV_MODE,
     CONF_EV_PHASE_MODE,
     CONF_EV_PRIORITY,
     CONF_EV_VEHICLE_SOC,
@@ -109,7 +108,6 @@ def test_dashboard_uses_configured_entities() -> None:
             hass,
             _entry(
                 {
-                    CONF_EV_MODE: "input_select.charge_mode",
                     CONF_EV_VEHICLE_SOC: "sensor.ev_soc",
                     CONF_EV_BATTERY_MIN_SOC: "input_number.minimum_soc",
                     CONF_CHARGE_SOC: 15,
@@ -129,7 +127,7 @@ def test_dashboard_uses_configured_entities() -> None:
     assert battery_card["charge_below"] == 15
     assert battery_card["normal_above"] == 20
     assert "number.grid_setpoint" in rendered
-    assert "input_select.charge_mode" in rendered
+    assert "select.gridpilot_ev_mode" in rendered
     assert "sensor.ev_soc" in rendered
     assert "number.ev_current" in rendered
     assert "number.gridpilot_ev_priority" in rendered
@@ -140,7 +138,6 @@ def test_dashboard_uses_configured_entities() -> None:
     assert "Schaduwmodus" in rendered
     assert "Thuisbatterij naar EV" in rendered
     assert "strategy_labels" in rendered
-    assert "Automatisch" in rendered
     assert "PV-laden is gestart" in rendered
     assert "De netcompensatie wordt geleidelijk tot nul afgebouwd" in rendered
     ev_cards = config["views"][0]["sections"][1]["cards"]
