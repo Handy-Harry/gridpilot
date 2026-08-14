@@ -253,6 +253,7 @@
       "ev_energy_to_target": {"name": "EV-energie nodig tot doel"},
       "home_battery_capacity": {"name": "Geleerde bruikbare thuisbatterijcapaciteit"},
       "ev_battery_capacity_learned": {"name": "Geleerde bruikbare EV-batterijcapaciteit"},
+      "soc_load_devices": {"name": "SOC-gestuurde apparaten"},
       "ev_operating_mode": {
         "name": "EV-bedrijfsmodus",
         "state": {

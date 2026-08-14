@@ -16,11 +16,17 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     CONF_BATTERY_ENERGY,
+    CONF_ENABLE_SOC_LOAD_ACTUATION,
     CONF_EV_BATTERY_CAPACITY,
     CONF_EV_DEPARTURE_TARGET_SOC,
     CONF_EV_VEHICLE_SOC,
+    CONF_SOC_LOAD_ENTITIES,
+    CONF_SOC_LOAD_OFF_THRESHOLD,
+    CONF_SOC_LOAD_ON_THRESHOLD,
     DEFAULT_EV_BATTERY_CAPACITY,
     DEFAULT_EV_DEPARTURE_TARGET_SOC,
+    DEFAULT_SOC_LOAD_OFF_THRESHOLD,
+    DEFAULT_SOC_LOAD_ON_THRESHOLD,
     EV_CONTROL_MODES,
     EV_STRATEGIES,
     MODES,
@@ -254,6 +260,51 @@ class EVBatteryCapacitySensor(GridPilotEntity, SensorEntity):
         return self.controller.learned_capacity("ev")
 
 
+class SOCLoadDevicesSensor(GridPilotEntity, SensorEntity):
+    """Expose flexible devices and their SOC switching thresholds."""
+
+    _attr_translation_key = "soc_load_devices"
+
+    def __init__(self, entry: GridPilotConfigEntry) -> None:
+        super().__init__(entry)
+        self._attr_unique_id = f"{entry.entry_id}_soc_load_devices"
+
+    @property
+    def native_value(self) -> int:
+        entities = self.entry.options.get(CONF_SOC_LOAD_ENTITIES, [])
+        return len(entities) if isinstance(entities, list) else 0
+
+    @property
+    def extra_state_attributes(self) -> dict[str, object]:
+        entities = self.entry.options.get(CONF_SOC_LOAD_ENTITIES, [])
+        entity_ids = entities if isinstance(entities, list) else []
+        return {
+            "active_control": bool(
+                self.entry.options.get(CONF_ENABLE_SOC_LOAD_ACTUATION, False)
+            ),
+            "turn_on_at_soc": float(
+                self.entry.options.get(
+                    CONF_SOC_LOAD_ON_THRESHOLD, DEFAULT_SOC_LOAD_ON_THRESHOLD
+                )
+            ),
+            "turn_off_at_soc": float(
+                self.entry.options.get(
+                    CONF_SOC_LOAD_OFF_THRESHOLD, DEFAULT_SOC_LOAD_OFF_THRESHOLD
+                )
+            ),
+            "devices": [
+                {
+                    "entity_id": entity_id,
+                    "name": state.name if state else entity_id,
+                    "state": state.state if state else "unavailable",
+                }
+                for entity_id in entity_ids
+                if isinstance(entity_id, str)
+                for state in [self.hass.states.get(entity_id)]
+            ],
+        }
+
+
 class EVOperatingModeSensor(GridPilotEntity, SensorEntity):
     """Current calculated EV control mode."""
 
@@ -320,6 +371,7 @@ async def async_setup_entry(
             EVEnergyToTargetSensor(entry),
             HomeBatteryCapacitySensor(entry),
             EVBatteryCapacitySensor(entry),
+            SOCLoadDevicesSensor(entry),
             EVOperatingModeSensor(entry),
             EVStrategySensor(entry),
             EVControlReasonSensor(entry),

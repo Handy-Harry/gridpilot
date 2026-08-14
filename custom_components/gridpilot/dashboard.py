@@ -118,6 +118,7 @@ def _dashboard_config(
     actuation_healthy = _gridpilot_entity(
         hass, entry, "binary_sensor", "actuation_healthy"
     )
+    soc_load_devices = _gridpilot_entity(hass, entry, "sensor", "soc_load_devices")
     charge_soc = float(entry.options.get(CONF_CHARGE_SOC, DEFAULT_CHARGE_SOC))
 
     battery_cards: list[dict[str, Any]] = [
@@ -152,6 +153,7 @@ def _dashboard_config(
                 actuation_healthy,
             ),
         },
+        {"type": "markdown", "content": _soc_load_markdown(soc_load_devices)},
     ]
 
     ev_cards = _ev_cards(hass, entry)
@@ -590,3 +592,24 @@ GridPilot plant het laden vanaf nu om het doel op tijd te halen.
 """.replace("MODE", operating_mode).replace("REASON", reason).replace(
         "TARGET_CURRENT", target_current
     ).replace("DEPARTURE_TIME", departure_time).replace("TARGET_SOC", target_soc)
+
+def _soc_load_markdown(sensor: str) -> str:
+    """Return the flexible-device status and SOC switching rules."""
+    return """### Flexibele apparaten
+{% set devices = state_attr('SENSOR', 'devices') or [] %}
+{% set active = state_attr('SENSOR', 'active_control') %}
+{% set on_threshold = state_attr('SENSOR', 'turn_on_at_soc') %}
+{% set off_threshold = state_attr('SENSOR', 'turn_off_at_soc') %}
+{% if not devices %}
+Er zijn momenteel geen apparaten geconfigureerd voor GridPilot SOC-sturing.
+{% else %}
+{% if not active %}**Sturing is uitgeschakeld.**{% endif %}
+{% for device in devices %}
+- **{{ device.name }}** ({{ device.state }})
+  - Aan bij {{ on_threshold | round(0) }}% SOC
+  - Uit bij {{ off_threshold | round(0) }}% SOC
+{% endfor %}
+{% endif %}
+
+GridPilot gebruikt SOC-drempels, geen vaste tijdstippen.
+""".replace("SENSOR", sensor)

@@ -258,6 +258,7 @@
       "ev_energy_to_target": {"name": "EV energy needed to target"},
       "home_battery_capacity": {"name": "Learned usable home battery capacity"},
       "ev_battery_capacity_learned": {"name": "Learned usable EV battery capacity"},
+      "soc_load_devices": {"name": "SOC-controlled devices"},
       "ev_operating_mode": {
         "name": "EV operating mode",
         "state": {
