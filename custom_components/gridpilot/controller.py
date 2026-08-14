@@ -23,26 +23,37 @@ from homeassistant.helpers.event import (
 from homeassistant.util import dt as dt_util
 
 from .calculations import BatteryCurve, calculate_battery_decision, normalize_power
+from .capacity import CapacitySample, update_capacity_sample
 from .const import (
+    CONF_BATTERY_CHARGE_ENERGY,
     CONF_BATTERY_CHARGE_POSITIVE,
+    CONF_BATTERY_DISCHARGE_ENERGY,
+    CONF_BATTERY_ENERGY,
     CONF_BATTERY_POWER,
     CONF_BATTERY_SOC,
+    CONF_CAPACITY_CALIBRATION,
     CONF_CHARGE_SOC,
     CONF_ENABLE_ACTUATION,
     CONF_ENABLE_EV_ACTUATION,
     CONF_ENABLE_SOC_LOAD_ACTUATION,
+    CONF_EV_BATTERY_CAPACITY,
     CONF_EV_BATTERY_MIN_SOC,
     CONF_EV_BATTERY_SOC,
     CONF_EV_BATTERY_TARGET_TIME,
     CONF_EV_BATTERY_TIME_TO_GO,
+    CONF_EV_CHARGE_ENERGY,
     CONF_EV_CONNECTION_STATE,
     CONF_EV_CURRENT_FEEDBACK,
     CONF_EV_CURRENT_LIMIT,
+    CONF_EV_DEPARTURE_TARGET_SOC,
+    CONF_EV_DEPARTURE_TIME,
+    CONF_EV_DISCHARGE_ENERGY,
     CONF_EV_MANUAL_CURRENT,
     CONF_EV_MAX_CURRENT,
     CONF_EV_PHASE_MODE,
     CONF_EV_POWER,
     CONF_EV_PRIORITY,
+    CONF_EV_VEHICLE_SOC,
     CONF_EV_VOLTAGE,
     CONF_GRID_POWER,
     CONF_GRID_SETPOINT,
@@ -61,7 +72,11 @@ from .const import (
     DEFAULT_ENABLE_ACTUATION,
     DEFAULT_ENABLE_EV_ACTUATION,
     DEFAULT_ENABLE_SOC_LOAD_ACTUATION,
+    DEFAULT_EV_BATTERY_CAPACITY,
     DEFAULT_EV_BATTERY_MODE,
+    DEFAULT_EV_DEPARTURE_MODE,
+    DEFAULT_EV_DEPARTURE_TARGET_SOC,
+    DEFAULT_EV_DEPARTURE_TIME,
     DEFAULT_EV_DISCONNECTED_STATE,
     DEFAULT_EV_MANUAL_MODE,
     DEFAULT_EV_MAX_CURRENT,
@@ -73,9 +88,13 @@ from .const import (
     DEFAULT_PV_SAFETY_MARGIN,
     DEFAULT_SOC_LOAD_OFF_THRESHOLD,
     DEFAULT_SOC_LOAD_ON_THRESHOLD,
+    DEPARTURE_BATTERY_POWER_DEADBAND,
+    DEPARTURE_SETPOINT_INTERVAL,
+    DEPARTURE_SETPOINT_STEP,
     EV_CURRENT_DEADBAND,
     EV_CURRENT_MEDIAN_WINDOW,
     EV_CURRENT_STEP,
+    EV_DEPARTURE_CURRENT_STEP,
     EV_MIN_CURRENT,
     EV_MODE_BLOCKED,
     EV_MODE_CHARGING,
@@ -92,6 +111,7 @@ from .const import (
     EV_STOP_CURRENT,
     EV_STOP_DELAY,
     EV_STRATEGY_BATTERY_TO_EV,
+    EV_STRATEGY_DEPARTURE,
     EV_STRATEGY_MANUAL,
     EV_STRATEGY_NONE,
     EV_STRATEGY_PV,
@@ -103,6 +123,7 @@ from .const import (
 )
 from .ev_calculations import (
     calculate_battery_to_ev_decision,
+    calculate_departure_ev_decision,
     calculate_ev_pv_decision,
     calculate_manual_ev_decision,
     update_battery_full_hysteresis,
@@ -159,6 +180,15 @@ class GridPilotController:
             )
         )
         self.last_soc_load_actuation_error: str | None = None
+        self.departure_battery_power: float | None = None
+        self._departure_grid_setpoint: float | None = None
+        self._last_departure_setpoint_adjustment: float | None = None
+        self._departure_ev_current: float | None = None
+        self._departure_ev_plan: tuple[float | int | str, ...] | None = None
+        calibration = entry.options.get(CONF_CAPACITY_CALIBRATION, {})
+        self._capacity_calibration: dict[str, CapacitySample] = (
+            calibration if isinstance(calibration, dict) else {}
+        )
 
     async def async_update_ev_priority(self, value: float) -> None:
         """Update EV priority without pausing the active EV charger."""
@@ -175,6 +205,14 @@ class GridPilotController:
         self.hass.config_entries.async_update_entry(
             self.entry,
             options={**self.entry.options, CONF_GRIDPILOT_EV_MODE: value},
+        )
+        await self.async_refresh()
+
+    async def async_update_ev_option(self, key: str, value: float) -> None:
+        """Persist one GridPilot-owned EV departure setting."""
+        self._skip_next_options_reload = True
+        self.hass.config_entries.async_update_entry(
+            self.entry, options={**self.entry.options, key: value}
         )
         await self.async_refresh()
 
@@ -208,6 +246,7 @@ class GridPilotController:
             in {
                 CONF_GRID_POWER,
                 CONF_EV_POWER,
+                CONF_EV_VEHICLE_SOC,
                 CONF_EV_CONNECTION_STATE,
                 CONF_EV_CURRENT_LIMIT,
                 CONF_EV_CURRENT_FEEDBACK,
@@ -218,6 +257,11 @@ class GridPilotController:
                 CONF_EV_BATTERY_MIN_SOC,
                 CONF_EV_BATTERY_TIME_TO_GO,
                 CONF_EV_BATTERY_TARGET_TIME,
+                CONF_BATTERY_ENERGY,
+                CONF_BATTERY_CHARGE_ENERGY,
+                CONF_BATTERY_DISCHARGE_ENERGY,
+                CONF_EV_CHARGE_ENERGY,
+                CONF_EV_DISCHARGE_ENERGY,
             }
             and value
         )
@@ -274,12 +318,195 @@ class GridPilotController:
                 _LOGGER.debug("Unable to calculate GridPilot decision: %s", err)
 
             self._calculate_ev_decision()
+            await self._async_calibrate_capacities()
+            self._apply_departure_grid_plan()
             await self._async_apply_decision()
             await self._async_apply_ev_decision()
             await self._async_apply_soc_load_decision()
 
             for listener in tuple(self._listeners):
                 listener()
+
+    async def _async_calibrate_capacities(self) -> None:
+        """Learn usable capacity from SOC changes and cumulative energy meters."""
+        options = self.entry.options
+        changed = False
+        for name, soc_entity, charge_key, discharge_key in (
+            (
+                "home",
+                self.entry.data[CONF_BATTERY_SOC],
+                CONF_BATTERY_CHARGE_ENERGY,
+                CONF_BATTERY_DISCHARGE_ENERGY,
+            ),
+            (
+                "ev",
+                options.get(CONF_EV_VEHICLE_SOC),
+                CONF_EV_CHARGE_ENERGY,
+                CONF_EV_DISCHARGE_ENERGY,
+            ),
+        ):
+            if not isinstance(soc_entity, str):
+                continue
+            charge_entity = options.get(charge_key)
+            discharge_entity = options.get(discharge_key)
+            if not isinstance(charge_entity, str) and not isinstance(
+                discharge_entity, str
+            ):
+                continue
+            try:
+                sample = update_capacity_sample(
+                    self._capacity_calibration.get(name),
+                    soc=self._numeric_state(soc_entity),
+                    charge_energy=(
+                        self._energy_state(charge_entity)
+                        if isinstance(charge_entity, str)
+                        else 0.0
+                    ),
+                    discharge_energy=(
+                        self._energy_state(discharge_entity)
+                        if isinstance(discharge_entity, str)
+                        else 0.0
+                    ),
+                )
+            except ValueError:
+                continue
+            if sample != self._capacity_calibration.get(name):
+                self._capacity_calibration[name] = sample
+                changed = True
+        if changed:
+            self._skip_next_options_reload = True
+            self.hass.config_entries.async_update_entry(
+                self.entry,
+                options={
+                    **options,
+                    CONF_CAPACITY_CALIBRATION: self._capacity_calibration,
+                },
+            )
+
+    def learned_capacity(self, battery: str) -> float | None:
+        """Return a learned usable capacity once a valid calibration exists."""
+        sample = self._capacity_calibration.get(battery)
+        if sample and sample["capacity"] > 0:
+            return sample["capacity"]
+        return None
+
+    def _apply_departure_grid_plan(self) -> None:
+        """Steer measured battery discharge gradually toward the departure plan."""
+        self.departure_battery_power = None
+        if (
+            self.ev_decision.strategy != EV_STRATEGY_DEPARTURE
+            or not self.ev_decision.valid
+            or self.ev_decision.requested_current is None
+            or self.ev_decision.phase_count is None
+        ):
+            self._last_departure_setpoint_adjustment = None
+            self._departure_grid_setpoint = None
+            self._departure_ev_current = None
+            self._departure_ev_plan = None
+            return
+        try:
+            battery_target = self._departure_battery_power()
+            actual_discharge = self._departure_battery_discharge_power()
+            actual_setpoint = self._current_grid_setpoint()
+            current_setpoint = self._departure_grid_setpoint or actual_setpoint
+            now = monotonic()
+            adjustment_due = (
+                self._last_departure_setpoint_adjustment is None
+                or now - self._last_departure_setpoint_adjustment
+                >= DEPARTURE_SETPOINT_INTERVAL.total_seconds()
+            )
+            deviation = actual_discharge - battery_target
+            target_setpoint = min(
+                self._max_grid_power(), max(0.0, actual_setpoint + deviation)
+            )
+            if adjustment_due and deviation > DEPARTURE_BATTERY_POWER_DEADBAND:
+                requested = current_setpoint + DEPARTURE_SETPOINT_STEP
+                self._last_departure_setpoint_adjustment = now
+            elif adjustment_due and deviation < -DEPARTURE_BATTERY_POWER_DEADBAND:
+                requested = current_setpoint - DEPARTURE_SETPOINT_STEP
+                self._last_departure_setpoint_adjustment = now
+            else:
+                requested = current_setpoint
+            requested = min(self._max_grid_power(), max(0.0, requested))
+        except (KeyError, TypeError, ValueError):
+            if self._departure_grid_setpoint is not None:
+                self.decision = replace(
+                    self.decision,
+                    requested_grid_setpoint=self._departure_grid_setpoint,
+                    calculated_grid_setpoint=self._departure_grid_setpoint,
+                    reason="Grid setpoint steers home battery toward departure reserve",
+                )
+            return
+
+        if (
+            adjustment_due
+            and
+            actual_discharge > battery_target + DEPARTURE_BATTERY_POWER_DEADBAND
+            and math.isclose(requested, self._max_grid_power(), abs_tol=1.0)
+        ):
+            current = self._departure_ev_current or self.ev_decision.requested_current
+            if current is not None and current > EV_MIN_CURRENT:
+                self._departure_ev_current = round(
+                    max(EV_MIN_CURRENT, current - EV_DEPARTURE_CURRENT_STEP), 2
+                )
+                self.ev_decision = replace(
+                    self.ev_decision,
+                    reason="EV current reduced because grid setpoint is saturated",
+                    requested_current=self._departure_ev_current,
+                )
+        self.departure_battery_power = round(battery_target, 1)
+        self._departure_grid_setpoint = float(round(requested / 10) * 10)
+        self.decision = replace(
+            self.decision,
+            requested_grid_setpoint=self._departure_grid_setpoint,
+            calculated_grid_setpoint=round(target_setpoint, 1),
+            reason="Grid setpoint steers home battery toward departure reserve",
+        )
+
+    def _departure_battery_discharge_power(self) -> float:
+        """Return actual home-battery discharge power as a positive watt value."""
+        power = self._power_state(self.entry.data[CONF_BATTERY_POWER])
+        if not bool(
+            self.entry.options.get(
+                CONF_BATTERY_CHARGE_POSITIVE, DEFAULT_BATTERY_CHARGE_POSITIVE
+            )
+        ):
+            power = -power
+        return max(0.0, -power)
+
+    def _current_grid_setpoint(self) -> float:
+        """Return the current Victron grid setpoint in watts."""
+        entity_id = self.entry.data[CONF_GRID_SETPOINT]
+        state = self.hass.states.get(entity_id)
+        if state is None or state.state in {"unknown", "unavailable"}:
+            raise ValueError(f"Grid setpoint is unavailable: {entity_id}")
+        return normalize_power(
+            float(state.state), state.attributes.get("unit_of_measurement")
+        )
+
+    def _departure_battery_power(self) -> float:
+        """Return battery power that reaches the compensation SOC at departure."""
+        soc = self._numeric_state(self.entry.data[CONF_BATTERY_SOC])
+        reserve_soc = float(
+            self.entry.options.get(CONF_CHARGE_SOC, DEFAULT_CHARGE_SOC)
+        )
+        if soc <= reserve_soc:
+            return 0.0
+        remaining_energy = self._home_battery_energy()
+        if remaining_energy <= 0:
+            return 0.0
+        available_energy = remaining_energy * (soc - reserve_soc) / soc
+        return available_energy * 3_600_000 / self._seconds_until_departure()
+
+    def _home_battery_energy(self) -> float:
+        """Return measured or SOC-derived remaining home battery energy in kWh."""
+        entity_id = self.entry.options.get(CONF_BATTERY_ENERGY)
+        if isinstance(entity_id, str):
+            return self._energy_state(entity_id)
+        capacity = self.learned_capacity("home")
+        if capacity is None:
+            return 0.0
+        return capacity * self._numeric_state(self.entry.data[CONF_BATTERY_SOC]) / 100
 
     async def _async_apply_decision(self) -> None:
         """Apply a valid decision or reset to the safe neutral setpoint."""
@@ -410,6 +637,12 @@ class GridPilotController:
                     CONF_EV_BATTERY_TIME_TO_GO,
                     CONF_EV_BATTERY_TARGET_TIME,
                 },
+                EV_STRATEGY_DEPARTURE: {
+                    CONF_GRID_POWER,
+                    CONF_EV_VEHICLE_SOC,
+                    CONF_EV_VOLTAGE,
+                    CONF_EV_PHASE_MODE,
+                },
             }[strategy]
             missing = sorted(key for key in required if not options.get(key))
             if missing:
@@ -429,6 +662,67 @@ class GridPilotController:
                     max_current=float(
                         options.get(CONF_EV_MAX_CURRENT, DEFAULT_EV_MAX_CURRENT)
                     ),
+                )
+            elif strategy == EV_STRATEGY_DEPARTURE:
+                self._clear_ev_samples()
+                phase_count = self._phase_count(str(options[CONF_EV_PHASE_MODE]))
+                vehicle_soc = self._numeric_state(options[CONF_EV_VEHICLE_SOC])
+                target_soc = float(
+                    options.get(
+                        CONF_EV_DEPARTURE_TARGET_SOC,
+                        DEFAULT_EV_DEPARTURE_TARGET_SOC,
+                    )
+                )
+                battery_capacity = float(
+                    options.get(CONF_EV_BATTERY_CAPACITY, DEFAULT_EV_BATTERY_CAPACITY)
+                )
+                voltage = self._numeric_state(options[CONF_EV_VOLTAGE])
+                max_current = float(
+                    options.get(CONF_EV_MAX_CURRENT, DEFAULT_EV_MAX_CURRENT)
+                )
+                plan = (
+                    str(options.get(CONF_EV_DEPARTURE_TIME, DEFAULT_EV_DEPARTURE_TIME)),
+                    vehicle_soc,
+                    target_soc,
+                    battery_capacity,
+                    voltage,
+                    phase_count,
+                    max_current,
+                )
+                if plan != self._departure_ev_plan:
+                    self._departure_ev_current = None
+                    self._departure_ev_plan = plan
+                decision = calculate_departure_ev_decision(
+                    vehicle_soc=vehicle_soc,
+                    target_soc=target_soc,
+                    battery_capacity_kwh=battery_capacity,
+                    seconds_until_departure=self._seconds_until_departure(),
+                    voltage=voltage,
+                    phase_count=phase_count,
+                    max_current=max_current,
+                )
+                if (
+                    decision.requested_current
+                    and decision.requested_current > EV_PAUSE_CURRENT
+                ):
+                    if self._departure_ev_current is None:
+                        self._departure_ev_current = round(
+                            decision.requested_current / EV_DEPARTURE_CURRENT_STEP
+                        ) * EV_DEPARTURE_CURRENT_STEP
+                elif decision.target_current == EV_PAUSE_CURRENT:
+                    self._departure_ev_current = None
+                measured_current = self._current_state(
+                    options.get(CONF_EV_CURRENT_FEEDBACK)
+                    or options[CONF_EV_CURRENT_LIMIT]
+                )
+                self.ev_decision = replace(
+                    decision,
+                    mode=(
+                        EV_MODE_CHARGING
+                        if self._departure_ev_current is not None
+                        else decision.mode
+                    ),
+                    requested_current=self._departure_ev_current or EV_PAUSE_CURRENT,
                 )
             else:
                 self._clear_ev_samples()
@@ -480,6 +774,8 @@ class GridPilotController:
                 if all(options.get(key) for key in battery_options)
                 else EV_STRATEGY_NONE
             )
+        if mode == DEFAULT_EV_DEPARTURE_MODE:
+            return EV_STRATEGY_DEPARTURE
         return EV_STRATEGY_NONE
 
     def _set_unavailable_ev_decision(self, reason: str, strategy: str) -> None:
@@ -637,6 +933,19 @@ class GridPilotController:
         else:
             requested = current
         return requested, EV_MODE_CHARGING, "EV current follows available PV power"
+
+    @staticmethod
+    def _departure_requested_current(*, current: float, target: float) -> float:
+        """Ramp departure charging to avoid repeated large EV current changes."""
+        if target <= EV_PAUSE_CURRENT:
+            return EV_PAUSE_CURRENT
+        if current < EV_MIN_CURRENT:
+            return EV_MIN_CURRENT
+        if target >= current + EV_CURRENT_DEADBAND:
+            return round(min(target, current + EV_DEPARTURE_CURRENT_STEP), 2)
+        if target <= current - EV_CURRENT_DEADBAND:
+            return round(max(EV_MIN_CURRENT, current - EV_DEPARTURE_CURRENT_STEP), 2)
+        return round(current, 2)
 
     async def _async_apply_ev_decision(self) -> None:
         """Optionally apply the calculated EV current."""
@@ -944,6 +1253,25 @@ class GridPilotController:
             target += timedelta(days=1)
         return (dt_util.as_utc(target) - dt_util.as_utc(now)).total_seconds()
 
+    def _seconds_until_departure(self) -> float:
+        """Return seconds until the configured daily GridPilot departure time."""
+        value = str(
+            self.entry.options.get(CONF_EV_DEPARTURE_TIME, DEFAULT_EV_DEPARTURE_TIME)
+        )
+        departure = dt_util.parse_time(value)
+        if departure is None:
+            raise ValueError("Configured departure time is invalid")
+        now = dt_util.now()
+        target = now.replace(
+            hour=departure.hour,
+            minute=departure.minute,
+            second=departure.second,
+            microsecond=0,
+        )
+        if target <= now:
+            target += timedelta(days=1)
+        return (dt_util.as_utc(target) - dt_util.as_utc(now)).total_seconds()
+
     def _power_state(self, entity_id: str) -> float:
         state = self.hass.states.get(entity_id)
         if state is None or state.state in {"unknown", "unavailable"}:
@@ -951,6 +1279,19 @@ class GridPilotController:
         return normalize_power(
             float(state.state), state.attributes.get("unit_of_measurement")
         )
+
+    def _energy_state(self, entity_id: str) -> float:
+        """Return one finite energy state measured in kWh."""
+        state = self.hass.states.get(entity_id)
+        if state is None or state.state in {"unknown", "unavailable"}:
+            raise ValueError(f"Energy entity is unavailable: {entity_id}")
+        unit = state.attributes.get("unit_of_measurement")
+        if unit not in {"Wh", "kWh"}:
+            raise ValueError(f"Energy entity is not measured in Wh or kWh: {entity_id}")
+        value = float(state.state)
+        if not math.isfinite(value):
+            raise ValueError(f"Energy entity is not numeric: {entity_id}")
+        return value / 1000 if unit == "Wh" else value
 
     def _home_load(self) -> float:
         if entity_id := self.entry.data.get(CONF_HOME_LOAD):

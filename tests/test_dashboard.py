@@ -145,5 +145,9 @@ def test_dashboard_uses_configured_entities() -> None:
     assert ev_cards[1]["type"] == "custom:gridpilot-card"
     assert ev_cards[1]["name"] == "EV-batterij"
     assert "PV-prioriteit: thuisbatterij 0% / EV 100%" in rendered
+    assert "time.gridpilot_ev_departure_time" in rendered
+    assert "Vertrektijd laden" in rendered
+    assert "Deadline onhaalbaar" in rendered
+    assert "Geplande laadstroom" in rendered
     assert "gpt_" not in rendered
     assert "thuisbatterij_naar_auto" not in rendered

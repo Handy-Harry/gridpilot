@@ -114,4 +114,5 @@ def calculate_battery_decision(
         home_load=round(load, 1),
         max_grid_power=round(max_grid_power, 1),
         requested_grid_setpoint=float(rounded),
+        calculated_grid_setpoint=float(rounded),
     )

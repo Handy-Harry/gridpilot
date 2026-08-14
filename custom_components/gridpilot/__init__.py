@@ -9,7 +9,12 @@ from homeassistant.helpers import config_validation as cv
 
 from .calculations import normalize_power
 from .const import (
+    CONF_BATTERY_CHARGE_ENERGY,
+    CONF_BATTERY_DISCHARGE_ENERGY,
+    CONF_BATTERY_ENERGY,
     CONF_CHARGE_SOC,
+    CONF_EV_CHARGE_ENERGY,
+    CONF_EV_DEPARTURE_TIME,
     CONF_EV_OVERRIDE,
     CONF_EV_PHASE_MODE,
     CONF_GRIDPILOT_EV_MODE,
@@ -74,6 +79,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) ->
         Platform.BINARY_SENSOR,
         Platform.NUMBER,
         Platform.SELECT,
+        Platform.TIME,
     ]
     controller = GridPilotController(hass, entry)
     entry.runtime_data = GridPilotRuntime(controller=controller)
@@ -86,7 +92,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) ->
 
 async def async_migrate_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) -> bool:
     """Migrate legacy control parameters and SOC thresholds."""
-    if entry.version > 11:
+    if entry.version > 16:
         return False
 
     data = dict(entry.data)
@@ -155,6 +161,61 @@ async def async_migrate_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) 
             options[CONF_EV_PHASE_MODE] = "select.alfen_usable_phases1"
         version = 11
 
+    if version == 11:
+        version = 12
+
+    if version == 12:
+        options.pop(CONF_EV_DEPARTURE_TIME, None)
+        version = 13
+
+    if version == 13:
+        if data.get("profile") == "victron":
+            options.setdefault(
+                CONF_BATTERY_ENERGY, "sensor.batterij_resterende_energie"
+            )
+            options.setdefault(
+                CONF_BATTERY_CHARGE_ENERGY,
+                "sensor.gx_device_dc_battery_charge_energy",
+            )
+            options.setdefault(
+                CONF_BATTERY_DISCHARGE_ENERGY,
+                "sensor.gx_device_dc_battery_discharge_energy",
+            )
+            options.setdefault(
+                CONF_EV_CHARGE_ENERGY, "sensor.alfen_real_energy_delivered_sum"
+            )
+        version = 14
+
+    if version == 14:
+        options.setdefault(CONF_BATTERY_ENERGY, "sensor.batterij_resterende_energie")
+        options.setdefault(
+            CONF_BATTERY_CHARGE_ENERGY,
+            "sensor.gx_device_dc_battery_charge_energy",
+        )
+        options.setdefault(
+            CONF_BATTERY_DISCHARGE_ENERGY,
+            "sensor.gx_device_dc_battery_discharge_energy",
+        )
+        options.setdefault(
+            CONF_EV_CHARGE_ENERGY, "sensor.alfen_real_energy_delivered_sum"
+        )
+        version = 15
+
+    if version == 15:
+        options.setdefault(CONF_BATTERY_ENERGY, "sensor.batterij_resterende_energie")
+        options.setdefault(
+            CONF_BATTERY_CHARGE_ENERGY,
+            "sensor.gx_device_dc_battery_charge_energy",
+        )
+        options.setdefault(
+            CONF_BATTERY_DISCHARGE_ENERGY,
+            "sensor.gx_device_dc_battery_discharge_energy",
+        )
+        options.setdefault(
+            CONF_EV_CHARGE_ENERGY, "sensor.alfen_real_energy_delivered_sum"
+        )
+        version = 16
+
     if version != entry.version or data != entry.data or options != entry.options:
         hass.config_entries.async_update_entry(
             entry, data=data, options=options, version=version, minor_version=0
@@ -188,7 +249,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) -
         return False
     return await hass.config_entries.async_unload_platforms(
         entry,
-        [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.NUMBER, Platform.SELECT],
+        [
+            Platform.SENSOR,
+            Platform.BINARY_SENSOR,
+            Platform.NUMBER,
+            Platform.SELECT,
+            Platform.TIME,
+        ],
     )
 
 

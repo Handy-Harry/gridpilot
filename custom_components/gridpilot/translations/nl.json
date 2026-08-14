@@ -60,6 +60,11 @@
           "ev_battery_min_soc": "Minimum-SOC batterij-naar-EV (optioneel)",
           "ev_battery_time_to_go": "Resterende batterijtijd (optioneel)",
           "ev_battery_target_time": "Doeltijd batterij-naar-EV (optioneel)",
+          "battery_energy": "Resterende thuisbatterij-energie (optioneel)",
+          "battery_charge_energy": "Thuisbatterij geladen energie voor kalibratie (optioneel)",
+          "battery_discharge_energy": "Thuisbatterij ontladen energie voor kalibratie (optioneel)",
+          "ev_charge_energy": "EV geladen energie voor kalibratie (optioneel)",
+          "ev_discharge_energy": "EV ontladen energie voor kalibratie (optioneel)",
           "battery_charge_positive": "Positief batterijvermogen betekent laden",
           "ev_priority": "PV-prioriteit voor EV",
           "ev_max_current": "Maximale EV-stroom",
@@ -81,6 +86,11 @@
           "ev_battery_min_soc": "Getal- of invoergetal-entiteit met de minimale batterijreserve.",
           "ev_battery_time_to_go": "Duursensor in seconden waarmee de batterijontlading wordt gestuurd.",
           "ev_battery_target_time": "Datum/tijd-invoer met de deadline voor de reserve-SOC. Een verstreken deadline schuift dagelijks door.",
+          "battery_energy": "Sensor met de actuele resterende energie van de thuisbatterij in kWh.",
+          "battery_charge_energy": "Cumulatieve kWh-meter voor energie die in de thuisbatterij is geladen. GridPilot combineert deze met SOC-wijzigingen om de bruikbare capaciteit te leren.",
+          "battery_discharge_energy": "Cumulatieve kWh-meter voor energie die uit de thuisbatterij is ontladen. GridPilot combineert deze met SOC-wijzigingen om de bruikbare capaciteit te leren.",
+          "ev_charge_energy": "Cumulatieve kWh-meter voor energie die aan de EV is geleverd. GridPilot combineert deze met SOC-wijzigingen om de bruikbare capaciteit te leren.",
+          "ev_discharge_energy": "Alleen nodig voor V2H/V2G: vul een cumulatieve kWh-meter in wanneer de EV werkelijk energie teruglevert. Laat leeg bij normaal eenrichtingsladen; GridPilot leert dan de EV-capaciteit uitsluitend uit geladen energie en SOC-wijzigingen.",
           "battery_charge_positive": "Schakel in wanneer positief batterijvermogen laden betekent; schakel uit wanneer negatief batterijvermogen laden betekent.",
           "ev_priority": "Aandeel van beschikbare PV voor de EV zolang de thuisbatterij onder 98% blijft.",
           "ev_max_current": "Maximale stroom die GridPilot mag vragen. Standaard: 16 A.",
@@ -203,6 +213,17 @@
     "number": {
       "ev_priority": {
         "name": "PV-prioriteit EV"
+      },
+      "ev_departure_target_soc": {
+        "name": "EV-doel-SOC bij vertrek"
+      },
+      "ev_battery_capacity": {
+        "name": "Bruikbare EV-batterijcapaciteit"
+      }
+    },
+    "time": {
+      "ev_departure_time": {
+        "name": "EV-vertrektijd"
       }
     },
     "select": {
@@ -226,6 +247,12 @@
       "control_reason": {"name": "Reden van regeling"},
       "available_pv_power": {"name": "Beschikbaar PV-vermogen"},
       "ev_target_current": {"name": "EV-doelstroom"},
+      "departure_battery_power": {"name": "Gepland thuisbatterijvermogen voor vertrek"},
+      "home_battery_energy": {"name": "Resterende thuisbatterij-energie"},
+      "ev_battery_energy": {"name": "EV-batterijenergie"},
+      "ev_energy_to_target": {"name": "EV-energie nodig tot doel"},
+      "home_battery_capacity": {"name": "Geleerde bruikbare thuisbatterijcapaciteit"},
+      "ev_battery_capacity_learned": {"name": "Geleerde bruikbare EV-batterijcapaciteit"},
       "ev_operating_mode": {
         "name": "EV-bedrijfsmodus",
         "state": {
@@ -246,7 +273,8 @@
           "none": "Geen",
           "pv": "PV-overschot",
           "manual": "Handmatig",
-          "battery_to_ev": "Batterij naar EV"
+          "battery_to_ev": "Batterij naar EV",
+          "departure": "Vertrektijd"
         }
       }
     },

@@ -9,12 +9,14 @@ from .const import (
     BATTERY_FULL_SOC,
     EV_BATTERY_GRID_IMPORT_LIMIT,
     EV_BATTERY_MIN_TOLERANCE,
+    EV_CHARGING_EFFICIENCY,
     EV_CURRENT_STEP,
     EV_MIN_CURRENT,
     EV_MODE_CHARGING,
     EV_MODE_WAITING,
     EV_PAUSE_CURRENT,
     EV_STRATEGY_BATTERY_TO_EV,
+    EV_STRATEGY_DEPARTURE,
     EV_STRATEGY_MANUAL,
     EV_STRATEGY_PV,
 )
@@ -186,4 +188,73 @@ def calculate_battery_to_ev_decision(
         strategy=EV_STRATEGY_BATTERY_TO_EV,
         target_current=round(requested, 2),
         requested_current=round(requested, 2),
+    )
+
+
+def calculate_departure_ev_decision(
+    *,
+    vehicle_soc: float,
+    target_soc: float,
+    battery_capacity_kwh: float,
+    seconds_until_departure: float,
+    voltage: float,
+    phase_count: int,
+    max_current: float,
+) -> EVControlDecision:
+    """Plan the EV current needed to reach its target SOC by departure."""
+    values = (
+        vehicle_soc,
+        target_soc,
+        battery_capacity_kwh,
+        seconds_until_departure,
+        voltage,
+        max_current,
+    )
+    if not all(math.isfinite(value) for value in values):
+        raise ValueError("Departure charging inputs must be finite")
+    if not 0 <= vehicle_soc <= 100 or not 0 <= target_soc <= 100:
+        raise ValueError("EV SOC must be between 0 and 100 percent")
+    if battery_capacity_kwh <= 0:
+        raise ValueError("EV battery capacity must be positive")
+    if seconds_until_departure <= 0:
+        raise ValueError("Departure time must be in the future")
+    if phase_count not in (1, 3) or voltage <= 0:
+        raise ValueError("EV voltage and phase count are invalid")
+    if max_current < EV_MIN_CURRENT:
+        raise ValueError("EV maximum current must be at least 6 A")
+
+    if vehicle_soc >= target_soc:
+        return EVControlDecision(
+            valid=True,
+            mode=EV_MODE_WAITING,
+            reason="EV target SOC has been reached",
+            strategy=EV_STRATEGY_DEPARTURE,
+            target_current=EV_PAUSE_CURRENT,
+            requested_current=EV_PAUSE_CURRENT,
+            phase_count=phase_count,
+        )
+
+    needed_wh = (
+        battery_capacity_kwh
+        * 1000
+        * (target_soc - vehicle_soc)
+        / 100
+        / EV_CHARGING_EFFICIENCY
+    )
+    required_power = needed_wh * 3600 / seconds_until_departure
+    power_per_amp = voltage * phase_count
+    required_current = required_power / power_per_amp
+    requested = min(max_current, max(EV_MIN_CURRENT, required_current))
+    if required_current > max_current:
+        reason = "EV target SOC cannot be reached by departure time"
+    else:
+        reason = "EV current is planned for the departure time"
+    return EVControlDecision(
+        valid=True,
+        mode=EV_MODE_CHARGING,
+        reason=reason,
+        strategy=EV_STRATEGY_DEPARTURE,
+        target_current=round(required_current, 2),
+        requested_current=round(requested, 2),
+        phase_count=phase_count,
     )

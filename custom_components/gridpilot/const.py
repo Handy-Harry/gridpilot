@@ -10,7 +10,7 @@ VERSION: Final = "1.2.0"
 PLATFORMS: Final = ["sensor", "binary_sensor", "number"]
 UPDATE_INTERVAL: Final = timedelta(minutes=1)
 MIN_ACTUATION_INTERVAL: Final = timedelta(seconds=10)
-EV_UPDATE_INTERVAL: Final = timedelta(seconds=10)
+EV_UPDATE_INTERVAL: Final = timedelta(seconds=4)
 EV_POWER_MEDIAN_WINDOW: Final = timedelta(seconds=45)
 EV_CURRENT_MEDIAN_WINDOW: Final = timedelta(minutes=2)
 EV_STOP_DELAY: Final = timedelta(minutes=5)
@@ -19,6 +19,9 @@ EV_RESTART_DELAY: Final = timedelta(minutes=10)
 CONF_PROFILE: Final = "profile"
 CONF_BATTERY_SOC: Final = "battery_soc"
 CONF_BATTERY_POWER: Final = "battery_power"
+CONF_BATTERY_ENERGY: Final = "battery_energy"
+CONF_BATTERY_CHARGE_ENERGY: Final = "battery_charge_energy"
+CONF_BATTERY_DISCHARGE_ENERGY: Final = "battery_discharge_energy"
 CONF_GRID_SETPOINT: Final = "grid_setpoint"
 CONF_MAX_GRID_POWER: Final = "max_grid_power"
 CONF_HOME_LOAD: Final = "home_load"
@@ -54,6 +57,15 @@ CONF_SOC_LOAD_ENTITIES: Final = "soc_load_entities"
 CONF_SOC_LOAD_ON_THRESHOLD: Final = "soc_load_on_threshold"
 CONF_SOC_LOAD_OFF_THRESHOLD: Final = "soc_load_off_threshold"
 CONF_ENABLE_SOC_LOAD_ACTUATION: Final = "enable_soc_load_actuation"
+CONF_EV_DEPARTURE_TIME: Final = "ev_departure_time"
+CONF_EV_DEPARTURE_TARGET_SOC: Final = "ev_departure_target_soc"
+CONF_EV_BATTERY_CAPACITY: Final = "ev_battery_capacity"
+CONF_EV_CHARGE_ENERGY: Final = "ev_charge_energy"
+CONF_EV_DISCHARGE_ENERGY: Final = "ev_discharge_energy"
+CONF_CAPACITY_CALIBRATION: Final = "capacity_calibration"
+CAPACITY_MIN_SOC_DELTA: Final = 5.0
+CAPACITY_MIN_ENERGY_DELTA: Final = 1.0
+CAPACITY_SMOOTHING: Final = 0.25
 
 DEFAULT_CHARGE_SOC: Final = 15.0
 SOC_THRESHOLD_OFFSET: Final = 5.0
@@ -70,6 +82,7 @@ DEFAULT_BATTERY_CHARGE_POSITIVE: Final = True
 DEFAULT_EV_PV_MODE: Final = "PV laden"
 DEFAULT_EV_MANUAL_MODE: Final = "Manueel"
 DEFAULT_EV_BATTERY_MODE: Final = "Thuisbatterij naar EV"
+DEFAULT_EV_DEPARTURE_MODE: Final = "Vertrektijd"
 DEFAULT_EV_DISCONNECTED_STATE: Final = "Available"
 DEFAULT_EV_OFF_MODE: Final = "Uit"
 DEFAULT_EV_MODE: Final = DEFAULT_EV_PV_MODE
@@ -78,16 +91,25 @@ EV_MODE_OPTIONS: Final = [
     DEFAULT_EV_PV_MODE,
     DEFAULT_EV_MANUAL_MODE,
     DEFAULT_EV_BATTERY_MODE,
+    DEFAULT_EV_DEPARTURE_MODE,
 ]
 DEFAULT_EV_PRIORITY: Final = 50.0
 DEFAULT_EV_MAX_CURRENT: Final = 16.0
 DEFAULT_PV_SAFETY_MARGIN: Final = 0.0
+DEFAULT_EV_DEPARTURE_TARGET_SOC: Final = 80.0
+DEFAULT_EV_BATTERY_CAPACITY: Final = 75.0
+DEFAULT_EV_DEPARTURE_TIME: Final = "08:00:00"
+EV_CHARGING_EFFICIENCY: Final = 0.95
 
 EV_PAUSE_CURRENT: Final = 5.0
 EV_MIN_CURRENT: Final = 6.0
 EV_START_CURRENT: Final = 7.0
 EV_STOP_CURRENT: Final = 5.5
 EV_CURRENT_STEP: Final = 0.1
+EV_DEPARTURE_CURRENT_STEP: Final = 0.5
+DEPARTURE_SETPOINT_STEP: Final = 250.0
+DEPARTURE_BATTERY_POWER_DEADBAND: Final = 150.0
+DEPARTURE_SETPOINT_INTERVAL: Final = timedelta(seconds=10)
 EV_CURRENT_DEADBAND: Final = 0.3
 BATTERY_FULL_SOC: Final = 98.0
 BATTERY_FULL_RELEASE_SOC: Final = 97.0
@@ -98,11 +120,13 @@ EV_STRATEGY_NONE: Final = "none"
 EV_STRATEGY_PV: Final = "pv"
 EV_STRATEGY_MANUAL: Final = "manual"
 EV_STRATEGY_BATTERY_TO_EV: Final = "battery_to_ev"
+EV_STRATEGY_DEPARTURE: Final = "departure"
 EV_STRATEGIES: Final = [
     EV_STRATEGY_NONE,
     EV_STRATEGY_PV,
     EV_STRATEGY_MANUAL,
     EV_STRATEGY_BATTERY_TO_EV,
+    EV_STRATEGY_DEPARTURE,
 ]
 
 PROFILE_GENERIC: Final = "generic"

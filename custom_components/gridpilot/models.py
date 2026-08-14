@@ -14,6 +14,7 @@ class ControlDecision:
     home_load: float | None = None
     max_grid_power: float | None = None
     requested_grid_setpoint: float | None = None
+    calculated_grid_setpoint: float | None = None
 
 
 @dataclass(frozen=True, slots=True)

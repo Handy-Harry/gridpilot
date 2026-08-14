@@ -5,10 +5,14 @@
 - Preserve the measured EV charging current while changing PV priority or switching
   charging strategies; write the 5 A stop value only for an explicit stop decision.
 
-## Unreleased
+## 1.3.0 - 2026-08-14
 
-- Preserve the measured EV charging current while changing PV priority or switching
-  charging strategies; write the 5 A stop value only for an explicit stop decision.
+- Add departure-time EV charging with a target SOC, planned-current control, and
+  deadline feedback.
+- Add learned usable-capacity calibration and energy sensors for the home battery
+  and EV, with configured capacity fallbacks.
+- Extend the GridPilot dashboard with EV departure planning and battery-energy
+  information.
 
 ## 1.1.2 - 2026-08-12
 

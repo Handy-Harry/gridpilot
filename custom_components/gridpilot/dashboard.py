@@ -31,6 +31,7 @@ from .const import (
     DEFAULT_BATTERY_CHARGE_POSITIVE,
     DEFAULT_CHARGE_SOC,
     DEFAULT_EV_BATTERY_MODE,
+    DEFAULT_EV_DEPARTURE_MODE,
     DEFAULT_EV_MANUAL_MODE,
     DEFAULT_EV_PV_MODE,
     DOMAIN,
@@ -186,6 +187,26 @@ def _ev_cards(
     reason = _gridpilot_entity(hass, entry, "sensor", "ev_control_reason")
     target_current = _gridpilot_entity(hass, entry, "sensor", "ev_target_current")
     priority = _gridpilot_entity(hass, entry, "number", "ev_priority")
+    departure_target_soc = _gridpilot_entity(
+        hass, entry, "number", "ev_departure_target_soc"
+    )
+    battery_capacity = _gridpilot_entity(
+        hass, entry, "number", "ev_battery_capacity"
+    )
+    home_battery_energy = _gridpilot_entity(
+        hass, entry, "sensor", "home_battery_energy"
+    )
+    home_battery_capacity = _gridpilot_entity(
+        hass, entry, "sensor", "home_battery_capacity"
+    )
+    ev_battery_energy = _gridpilot_entity(hass, entry, "sensor", "ev_battery_energy")
+    ev_energy_to_target = _gridpilot_entity(
+        hass, entry, "sensor", "ev_energy_to_target"
+    )
+    ev_battery_capacity_learned = _gridpilot_entity(
+        hass, entry, "sensor", "ev_battery_capacity_learned"
+    )
+    departure_time = _gridpilot_entity(hass, entry, "time", "ev_departure_time")
     measurements_valid = _gridpilot_entity(
         hass, entry, "binary_sensor", "ev_measurements_valid"
     )
@@ -312,6 +333,47 @@ def _ev_cards(
                 },
             }
         )
+    cards.append(
+            {
+                "type": "conditional",
+                "conditions": [
+                    {
+                        "condition": "state",
+                        "entity": ev_mode,
+                        "state": DEFAULT_EV_DEPARTURE_MODE,
+                    }
+                ],
+                "card": {
+                    "type": "vertical-stack",
+                    "cards": [
+                        {
+                            "type": "entities",
+                            "title": "Vertrektijd laden",
+                            "entities": [
+                                departure_time,
+                                departure_target_soc,
+                                battery_capacity,
+                                home_battery_energy,
+                                home_battery_capacity,
+                                ev_battery_energy,
+                                ev_energy_to_target,
+                                ev_battery_capacity_learned,
+                            ],
+                        },
+                        {
+                            "type": "markdown",
+                            "content": _departure_plan_markdown(
+                                operating_mode,
+                                reason,
+                                target_current,
+                                departure_time,
+                                departure_target_soc,
+                            ),
+                        },
+                    ],
+                },
+            }
+    )
     cards.extend(
         [
             {
@@ -373,8 +435,14 @@ def _control_markdown(
   'Grid setpoint compensates the home load':
     'Het netsetpoint compenseert het huisverbruik',
   'SOC is at or below the minimum threshold': 'De SOC ligt op of onder de minimumgrens',
-  'Charge power rises as SOC approaches the minimum threshold':
-    'Het laadvermogen stijgt wanneer de SOC de minimumgrens nadert'
+   'Charge power rises as SOC approaches the minimum threshold':
+    'Het laadvermogen stijgt wanneer de SOC de minimumgrens nadert',
+  'Grid covers home load and planned EV charging':
+    'Het net dekt het huisverbruik en het geplande EV-laden',
+  'Grid and home battery cover planned EV charging':
+    'Het net en de thuisbatterij dekken het geplande EV-laden',
+  'Grid setpoint steers home battery toward departure reserve':
+    'Het netsetpoint stuurt de thuisbatterij naar de reserve bij vertrek'
 } %}
 {% if is_state('VALID', 'on') %}
 GridPilot verwerkt geldige meetwaarden.
@@ -420,8 +488,9 @@ def _ev_markdown(
 {% set strategy_labels = {
   'none': 'Uit',
   'pv': 'PV laden',
-  'manual': 'Manueel',
-  'battery_to_ev': 'Thuisbatterij naar EV'
+   'manual': 'Manueel',
+   'battery_to_ev': 'Thuisbatterij naar EV',
+   'departure': 'Vertrektijd'
 } %}
 {% set mode_labels = {
   'unavailable': 'Niet beschikbaar',
@@ -461,8 +530,15 @@ def _ev_markdown(
   'Waiting for sufficient PV power': 'Wachten op voldoende PV-vermogen',
   'PV stop delay elapsed': 'De PV-stopvertraging is verstreken',
   'Temporary PV shortage is buffered': 'Een tijdelijk PV-tekort wordt opgevangen',
-  'EV current follows available PV power':
-    'De EV-stroom volgt het beschikbare PV-vermogen'
+   'EV current follows available PV power':
+     'De EV-stroom volgt het beschikbare PV-vermogen',
+   'EV target SOC has been reached': 'Het EV-doel-SOC is bereikt',
+   'Maximum grid import leaves no EV charging capacity':
+     'De maximale netafname laat geen EV-laadvermogen toe',
+   'EV target SOC cannot be reached by departure time':
+     'Het EV-doel-SOC is niet haalbaar tegen de vertrektijd',
+   'EV current is planned for the departure time':
+     'De EV-stroom is gepland voor de vertrektijd'
 } %}
 {% if selected_mode == 'Uit' %}
 De laadregeling is uit.
@@ -485,3 +561,32 @@ CURRENT_LINE- **Meetwaarden:**
         .replace("HEALTHY", healthy)
         .replace("REASON", reason)
     )
+
+
+def _departure_plan_markdown(
+    operating_mode: str,
+    reason: str,
+    target_current: str,
+    departure_time: str,
+    target_soc: str,
+) -> str:
+    """Return the departure-time charging plan and deadline warning."""
+    return """### Laadplan
+{% set reason = states('REASON') %}
+{% set target_current = states('TARGET_CURRENT') | float(0) %}
+{% set departure = states('DEPARTURE_TIME') %}
+{% set target_soc = states('TARGET_SOC') | float(0) %}
+{% if reason == 'EV target SOC cannot be reached by departure time' %}
+**Deadline onhaalbaar.** GridPilot laadt met het maximaal beschikbare vermogen.
+{% elif is_state('MODE', 'waiting') and reason == 'EV target SOC has been reached' %}
+**Laaddoel bereikt.** De EV wacht tot de vertrektijd.
+{% else %}
+GridPilot plant het laden vanaf nu om het doel op tijd te halen.
+{% endif %}
+
+- **Vertrek:** {{ departure[:5] }}
+- **Doel-SOC:** {{ target_soc | round(0) }}%
+- **Geplande laadstroom:** {{ target_current | round(1) }} A
+""".replace("MODE", operating_mode).replace("REASON", reason).replace(
+        "TARGET_CURRENT", target_current
+    ).replace("DEPARTURE_TIME", departure_time).replace("TARGET_SOC", target_soc)

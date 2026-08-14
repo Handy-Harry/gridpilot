@@ -5,6 +5,7 @@ import pytest
 from custom_components.gridpilot.ev_calculations import (
     calculate_available_pv_power,
     calculate_battery_to_ev_decision,
+    calculate_departure_ev_decision,
     calculate_ev_pv_decision,
     calculate_manual_ev_decision,
     update_battery_full_hysteresis,
@@ -134,3 +135,50 @@ def test_battery_to_ev_adjusts_in_tenth_amp_steps(
     )
 
     assert decision.requested_current == expected
+
+
+def test_departure_charging_starts_at_the_average_required_current() -> None:
+    decision = calculate_departure_ev_decision(
+        vehicle_soc=50,
+        target_soc=80,
+        battery_capacity_kwh=60,
+        seconds_until_departure=28_800,
+        voltage=230,
+        phase_count=1,
+        max_current=16,
+    )
+
+    assert decision.strategy == "departure"
+    assert decision.mode == "charging"
+    assert decision.target_current == pytest.approx(10.3, abs=0.01)
+    assert decision.requested_current == pytest.approx(10.3, abs=0.01)
+
+
+def test_departure_charging_uses_maximum_when_deadline_requires_it() -> None:
+    decision = calculate_departure_ev_decision(
+        vehicle_soc=20,
+        target_soc=80,
+        battery_capacity_kwh=75,
+        seconds_until_departure=14_400,
+        voltage=230,
+        phase_count=1,
+        max_current=16,
+    )
+
+    assert decision.reason == "EV target SOC cannot be reached by departure time"
+    assert decision.requested_current == 16
+
+
+def test_departure_charging_pauses_when_target_soc_is_reached() -> None:
+    decision = calculate_departure_ev_decision(
+        vehicle_soc=80,
+        target_soc=80,
+        battery_capacity_kwh=60,
+        seconds_until_departure=28_800,
+        voltage=230,
+        phase_count=1,
+        max_current=16,
+    )
+
+    assert decision.mode == "waiting"
+    assert decision.requested_current == 5

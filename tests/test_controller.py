@@ -174,6 +174,133 @@ def _set_battery_to_ev_states(
     )
 
 
+def test_departure_current_ramps_in_half_amp_steps() -> None:
+    requested = GridPilotController._departure_requested_current
+    assert requested(current=6, target=11) == 6.5
+    assert requested(current=11, target=6) == 10.5
+    assert requested(current=11, target=11.1) == 11
+    assert requested(current=5, target=11) == 6
+
+
+def test_energy_state_requires_kwh(hass: HomeAssistant) -> None:
+    controller = GridPilotController(hass, _entry(False))
+    hass.states.async_set(
+        "sensor.battery_energy", "28.58", {"unit_of_measurement": "kWh"}
+    )
+
+    assert controller._energy_state("sensor.battery_energy") == 28.58
+
+
+def test_energy_state_converts_wh_to_kwh(hass: HomeAssistant) -> None:
+    controller = GridPilotController(hass, _entry(False))
+    hass.states.async_set(
+        "sensor.ev_energy", "44446840", {"unit_of_measurement": "Wh"}
+    )
+
+    assert controller._energy_state("sensor.ev_energy") == 44446.84
+
+
+def test_departure_grid_plan_reduces_setpoint_when_battery_is_below_target(
+    hass: HomeAssistant,
+) -> None:
+    entry = _entry(False, configure_ev=True, pv_mode="Vertrektijd")
+    _set_valid_states(hass)
+    _set_ev_states(hass)
+    controller = GridPilotController(hass, entry)
+    controller.ev_decision = controller.ev_decision.__class__(
+        valid=True,
+        mode="charging",
+        reason="EV current is planned for the departure time",
+        strategy="departure",
+        requested_current=6,
+        phase_count=1,
+    )
+
+    controller._apply_departure_grid_plan()
+
+    assert controller.decision.requested_grid_setpoint == 0
+
+
+def test_departure_grid_plan_reduces_ev_current_at_grid_setpoint_limit(
+    hass: HomeAssistant,
+) -> None:
+    entry = _entry(False, configure_ev=True, pv_mode="Vertrektijd")
+    _set_valid_states(hass)
+    _set_ev_states(hass)
+    hass.states.async_set(
+        "sensor.battery_power", "-3000", {"unit_of_measurement": UnitOfPower.WATT}
+    )
+    hass.states.async_set(
+        "number.grid_setpoint",
+        "2900",
+        {"min": -10000, "max": 10000, "unit_of_measurement": UnitOfPower.WATT},
+    )
+    controller = GridPilotController(hass, entry)
+    controller.ev_decision = controller.ev_decision.__class__(
+        valid=True,
+        mode="charging",
+        reason="EV current is planned for the departure time",
+        strategy="departure",
+        requested_current=10,
+        phase_count=1,
+    )
+    controller._departure_ev_current = 10
+
+    controller._apply_departure_grid_plan()
+
+    assert controller.ev_decision.requested_current == 9.5
+    assert controller.decision.requested_grid_setpoint == 2900
+
+
+def test_departure_grid_plan_holds_last_setpoint_when_input_is_unavailable(
+    hass: HomeAssistant,
+) -> None:
+    entry = _entry(False, configure_ev=True, pv_mode="Vertrektijd")
+    _set_valid_states(hass)
+    _set_ev_states(hass)
+    controller = GridPilotController(hass, entry)
+    controller.ev_decision = controller.ev_decision.__class__(
+        valid=True,
+        mode="charging",
+        reason="EV current is planned for the departure time",
+        strategy="departure",
+        requested_current=10,
+        phase_count=1,
+    )
+    controller._departure_grid_setpoint = 1200
+    hass.states.async_set("sensor.battery_power", "unavailable")
+
+    controller._apply_departure_grid_plan()
+
+    assert controller.decision.requested_grid_setpoint == 1200
+
+
+def test_departure_grid_plan_increases_last_requested_setpoint_by_one_step(
+    hass: HomeAssistant,
+) -> None:
+    entry = _entry(False, configure_ev=True, pv_mode="Vertrektijd")
+    _set_valid_states(hass)
+    _set_ev_states(hass)
+    hass.states.async_set(
+        "sensor.battery_power", "-3000", {"unit_of_measurement": UnitOfPower.WATT}
+    )
+    controller = GridPilotController(hass, entry)
+    controller.ev_decision = controller.ev_decision.__class__(
+        valid=True,
+        mode="charging",
+        reason="EV current is planned for the departure time",
+        strategy="departure",
+        requested_current=10,
+        phase_count=1,
+    )
+    controller._departure_grid_setpoint = 1200
+
+    controller._apply_departure_grid_plan()
+
+    assert controller.decision.requested_grid_setpoint == 1450
+    assert controller.decision.calculated_grid_setpoint == 2900
+
+
 async def test_shadow_mode_never_writes(hass: HomeAssistant) -> None:
     _set_valid_states(hass)
     calls: list[ServiceCall] = []

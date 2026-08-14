@@ -11,7 +11,10 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import (
+    CONF_BATTERY_CHARGE_ENERGY,
     CONF_BATTERY_CHARGE_POSITIVE,
+    CONF_BATTERY_DISCHARGE_ENERGY,
+    CONF_BATTERY_ENERGY,
     CONF_BATTERY_POWER,
     CONF_BATTERY_SOC,
     CONF_CHARGE_SOC,
@@ -22,9 +25,11 @@ from .const import (
     CONF_EV_BATTERY_SOC,
     CONF_EV_BATTERY_TARGET_TIME,
     CONF_EV_BATTERY_TIME_TO_GO,
+    CONF_EV_CHARGE_ENERGY,
     CONF_EV_CONNECTION_STATE,
     CONF_EV_CURRENT_FEEDBACK,
     CONF_EV_CURRENT_LIMIT,
+    CONF_EV_DISCHARGE_ENERGY,
     CONF_EV_MANUAL_CURRENT,
     CONF_EV_MAX_CURRENT,
     CONF_EV_PHASE_MODE,
@@ -83,7 +88,7 @@ def _multiple_entity_selector(domains: list[str]) -> selector.EntitySelector:
 class GridPilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle the GridPilot setup flow."""
 
-    VERSION = 11
+    VERSION = 16
     MINOR_VERSION = 0
 
     def __init__(self) -> None:
@@ -382,6 +387,11 @@ def _ev_options_schema(current: dict[str, Any]) -> vol.Schema:
             optional_entity(CONF_EV_BATTERY_MIN_SOC, ["input_number", "number"]),
             optional_entity(CONF_EV_BATTERY_TIME_TO_GO, ["sensor"]),
             optional_entity(CONF_EV_BATTERY_TARGET_TIME, ["input_datetime"]),
+            optional_entity(CONF_BATTERY_ENERGY, ["sensor"]),
+            optional_entity(CONF_BATTERY_CHARGE_ENERGY, ["sensor"]),
+            optional_entity(CONF_BATTERY_DISCHARGE_ENERGY, ["sensor"]),
+            optional_entity(CONF_EV_CHARGE_ENERGY, ["sensor"]),
+            optional_entity(CONF_EV_DISCHARGE_ENERGY, ["sensor"]),
         ]
     )
     fields.update(

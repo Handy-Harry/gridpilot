@@ -60,6 +60,11 @@
           "ev_battery_min_soc": "Battery-to-EV minimum SOC (optional)",
           "ev_battery_time_to_go": "Battery time to go (optional)",
           "ev_battery_target_time": "Battery-to-EV target time (optional)",
+          "battery_energy": "Remaining home battery energy (optional)",
+          "battery_charge_energy": "Home battery charged energy for calibration (optional)",
+          "battery_discharge_energy": "Home battery discharged energy for calibration (optional)",
+          "ev_charge_energy": "EV charged energy for calibration (optional)",
+          "ev_discharge_energy": "EV discharged energy for calibration (optional)",
           "battery_charge_positive": "Positive battery power means charging",
           "ev_priority": "PV priority for EV",
           "ev_max_current": "Maximum EV current",
@@ -81,6 +86,11 @@
           "ev_battery_min_soc": "Number or input number containing the battery reserve SOC.",
           "ev_battery_time_to_go": "Duration sensor in seconds used to pace battery discharge.",
           "ev_battery_target_time": "Input datetime containing the reserve-SOC deadline. An expired deadline is rolled forward daily.",
+          "battery_energy": "Sensor containing the current remaining home battery energy in kWh.",
+          "battery_charge_energy": "Cumulative kWh meter for energy charged into the home battery. GridPilot combines it with SOC changes to learn usable capacity.",
+          "battery_discharge_energy": "Cumulative kWh meter for energy discharged from the home battery. GridPilot combines it with SOC changes to learn usable capacity.",
+          "ev_charge_energy": "Cumulative kWh meter for energy delivered to the EV. GridPilot combines it with SOC changes to learn usable capacity.",
+          "ev_discharge_energy": "Only needed for V2H/V2G: provide a cumulative kWh meter when the EV actually supplies energy. Leave empty for normal one-way charging; GridPilot then learns EV capacity from charged energy and SOC changes only.",
           "battery_charge_positive": "Enable when positive battery power means charging; disable when negative battery power means charging.",
           "ev_priority": "Share of available PV assigned to the EV while the home battery is below 98%.",
           "ev_max_current": "Maximum current GridPilot may request. Default: 16 A.",
@@ -208,6 +218,17 @@
     "number": {
       "ev_priority": {
         "name": "EV priority"
+      },
+      "ev_departure_target_soc": {
+        "name": "EV target SOC at departure"
+      },
+      "ev_battery_capacity": {
+        "name": "Usable EV battery capacity"
+      }
+    },
+    "time": {
+      "ev_departure_time": {
+        "name": "EV departure time"
       }
     },
     "select": {
@@ -231,6 +252,12 @@
       "control_reason": {"name": "Control reason"},
       "available_pv_power": {"name": "Available PV power"},
       "ev_target_current": {"name": "EV target current"},
+      "departure_battery_power": {"name": "Planned home battery power for departure"},
+      "home_battery_energy": {"name": "Remaining home battery energy"},
+      "ev_battery_energy": {"name": "EV battery energy"},
+      "ev_energy_to_target": {"name": "EV energy needed to target"},
+      "home_battery_capacity": {"name": "Learned usable home battery capacity"},
+      "ev_battery_capacity_learned": {"name": "Learned usable EV battery capacity"},
       "ev_operating_mode": {
         "name": "EV operating mode",
         "state": {
@@ -251,7 +278,8 @@
           "none": "None",
           "pv": "PV surplus",
           "manual": "Manual",
-          "battery_to_ev": "Battery to EV"
+          "battery_to_ev": "Battery to EV",
+          "departure": "Departure time"
         }
       }
     },
