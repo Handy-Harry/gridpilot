@@ -532,8 +532,8 @@ async def test_strategy_change_starts_from_measured_current(
     controller.entry.add_to_hass(hass)
     await controller.async_update_ev_mode("PV laden")
 
-    assert controller.ev_decision.requested_current == 9.9
-    assert [call.data["value"] for call in calls] == [10, 9.9]
+    assert controller.ev_decision.requested_current == 9.5
+    assert [call.data["value"] for call in calls] == [10, 9.5]
 
 
 async def test_battery_to_ev_toggle_does_not_override_pv_mode(
@@ -896,11 +896,11 @@ async def test_ev_current_limit_readback_does_not_reset_pv_ramp(
     _set_valid_states(hass)
     _set_ev_states(hass)
     controller = GridPilotController(hass, _entry(False, configure_ev=True))
-    controller.last_applied_ev_current = 6.1
+    controller.last_applied_ev_current = 6.0
 
     await controller.async_refresh()
 
-    assert controller.ev_decision.requested_current == 6.2
+    assert controller.ev_decision.requested_current == 6.5
 
 
 async def test_ev_readback_above_configured_maximum_is_clamped(

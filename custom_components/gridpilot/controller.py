@@ -93,7 +93,7 @@ from .const import (
     DEPARTURE_SETPOINT_STEP,
     EV_CURRENT_DEADBAND,
     EV_CURRENT_MEDIAN_WINDOW,
-    EV_CURRENT_STEP,
+    EV_PV_CURRENT_STEP,
     EV_DEPARTURE_CURRENT_STEP,
     EV_MIN_CURRENT,
     EV_MODE_BLOCKED,
@@ -921,7 +921,7 @@ class GridPilotController:
             return (
                 min(
                     max_current,
-                    max(EV_MIN_CURRENT, current - EV_CURRENT_STEP),
+                    max(EV_MIN_CURRENT, current - EV_PV_CURRENT_STEP),
                 ),
                 EV_MODE_STOP_DELAY,
                 "Temporary PV shortage is buffered",
@@ -930,12 +930,12 @@ class GridPilotController:
         self._ev_stop_started = None
         bounded = min(max_current, max(EV_MIN_CURRENT, target))
         if bounded >= current + EV_CURRENT_DEADBAND:
-            requested = round(min(max_current, current + EV_CURRENT_STEP), 2)
+            requested = round(min(max_current, current + EV_PV_CURRENT_STEP), 2)
         elif bounded <= current - EV_CURRENT_DEADBAND:
             requested = round(
                 min(
                     max_current,
-                    max(EV_MIN_CURRENT, current - EV_CURRENT_STEP),
+                    max(EV_MIN_CURRENT, current - EV_PV_CURRENT_STEP),
                 ),
                 2,
             )
