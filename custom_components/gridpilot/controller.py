@@ -860,13 +860,19 @@ class GridPilotController:
             EV_CURRENT_MEDIAN_WINDOW.total_seconds(),
             now,
         )
+        feedback_entity = options.get(CONF_EV_CURRENT_FEEDBACK)
         measured_current = self._current_state(
-            str(options.get(CONF_EV_CURRENT_FEEDBACK) or options[CONF_EV_CURRENT_LIMIT])
+            str(feedback_entity or options[CONF_EV_CURRENT_LIMIT])
+        )
+        # The current-limit number is a command and can read back a rounded,
+        # stale value. Only a configured feedback sensor represents measured current.
+        current = (
+            measured_current
+            if feedback_entity or self.last_applied_ev_current is None
+            else self.last_applied_ev_current
         )
         requested, control_mode, reason = self._ev_requested_current(
-            current=(
-                measured_current
-            ),
+            current=current,
             target=target,
             target_median=target_median,
             max_current=max_current,
@@ -924,11 +930,14 @@ class GridPilotController:
         self._ev_stop_started = None
         bounded = min(max_current, max(EV_MIN_CURRENT, target))
         if bounded >= current + EV_CURRENT_DEADBAND:
-            requested = min(max_current, current + EV_CURRENT_STEP)
+            requested = round(min(max_current, current + EV_CURRENT_STEP), 2)
         elif bounded <= current - EV_CURRENT_DEADBAND:
-            requested = min(
-                max_current,
-                max(EV_MIN_CURRENT, current - EV_CURRENT_STEP),
+            requested = round(
+                min(
+                    max_current,
+                    max(EV_MIN_CURRENT, current - EV_CURRENT_STEP),
+                ),
+                2,
             )
         else:
             requested = current

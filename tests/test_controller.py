@@ -890,6 +890,19 @@ async def test_ev_current_feedback_drives_ramping(hass: HomeAssistant) -> None:
     assert controller.ev_decision.requested_current == 8
 
 
+async def test_ev_current_limit_readback_does_not_reset_pv_ramp(
+    hass: HomeAssistant,
+) -> None:
+    _set_valid_states(hass)
+    _set_ev_states(hass)
+    controller = GridPilotController(hass, _entry(False, configure_ev=True))
+    controller.last_applied_ev_current = 6.1
+
+    await controller.async_refresh()
+
+    assert controller.ev_decision.requested_current == 6.2
+
+
 async def test_ev_readback_above_configured_maximum_is_clamped(
     hass: HomeAssistant,
 ) -> None:
