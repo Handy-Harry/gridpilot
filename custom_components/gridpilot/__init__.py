@@ -17,12 +17,25 @@ from .const import (
     CONF_EV_DEPARTURE_TIME,
     CONF_EV_OVERRIDE,
     CONF_EV_PHASE_MODE,
+    CONF_GRID_POWER,
     CONF_GRIDPILOT_EV_MODE,
+    CONF_HAS_EV,
+    CONF_HAS_EV_CHARGER,
+    CONF_HAS_GRID_CONNECTION,
+    CONF_HAS_HOME_BATTERY,
+    CONF_HAS_PV,
+    CONF_HAS_SOC_LOADS,
     CONF_MAX_GRID_POWER,
     CONF_MINIMUM_SOC,
     CONF_NORMAL_SOC,
+    CONF_SOC_LOAD_ENTITIES,
+    CONF_SOC_LOAD_OFF_THRESHOLD,
+    CONF_SOC_LOAD_ON_THRESHOLD,
+    CONF_SOC_LOAD_THRESHOLDS,
     DEFAULT_CHARGE_SOC,
     DEFAULT_EV_MODE,
+    DEFAULT_SOC_LOAD_OFF_THRESHOLD,
+    DEFAULT_SOC_LOAD_ON_THRESHOLD,
     VERSION,
 )
 from .const import DOMAIN as DOMAIN
@@ -92,7 +105,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) ->
 
 async def async_migrate_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) -> bool:
     """Migrate legacy control parameters and SOC thresholds."""
-    if entry.version > 16:
+    if entry.version > 18:
         return False
 
     data = dict(entry.data)
@@ -215,6 +228,43 @@ async def async_migrate_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) 
             CONF_EV_CHARGE_ENERGY, "sensor.alfen_real_energy_delivered_sum"
         )
         version = 16
+
+    if version == 16:
+        data.setdefault(CONF_HAS_GRID_CONNECTION, True)
+        data.setdefault(CONF_HAS_HOME_BATTERY, True)
+        data.setdefault(CONF_HAS_PV, CONF_GRID_POWER in options)
+        data.setdefault(
+            CONF_HAS_EV,
+            any(
+                key in options
+                for key in (CONF_EV_CHARGE_ENERGY, "ev_vehicle_soc", "ev_current_limit")
+            ),
+        )
+        data.setdefault(CONF_HAS_EV_CHARGER, "ev_current_limit" in options)
+        data.setdefault(CONF_HAS_SOC_LOADS, "soc_load_entities" in options)
+        version = 17
+
+    if version == 17:
+        entities = options.get(CONF_SOC_LOAD_ENTITIES, [])
+        if isinstance(entities, list):
+            on_threshold = options.pop(
+                CONF_SOC_LOAD_ON_THRESHOLD, DEFAULT_SOC_LOAD_ON_THRESHOLD
+            )
+            off_threshold = options.pop(
+                CONF_SOC_LOAD_OFF_THRESHOLD, DEFAULT_SOC_LOAD_OFF_THRESHOLD
+            )
+            options.setdefault(
+                CONF_SOC_LOAD_THRESHOLDS,
+                {
+                    entity_id: {
+                        "on": str(int(float(on_threshold))),
+                        "off": str(int(float(off_threshold))),
+                    }
+                    for entity_id in entities
+                    if isinstance(entity_id, str)
+                },
+            )
+        version = 18
 
     if version != entry.version or data != entry.data or options != entry.options:
         hass.config_entries.async_update_entry(

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.4 - 2026-08-15
+
+- Configure SOC-controlled devices individually with their own on and off
+  thresholds, and migrate existing shared thresholds safely.
+- Show each device's SOC switching thresholds correctly on the GridPilot dashboard.
+- Improve GridPilot's battery and EV energy configuration, dashboard information,
+  translations, and test coverage.
+
 ## 1.1.3 - 2026-08-12
 
 - Preserve the measured EV charging current while changing PV priority or switching

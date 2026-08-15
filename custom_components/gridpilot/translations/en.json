@@ -3,14 +3,60 @@
   "config": {
     "step": {
       "user": {
-        "title": "Choose a configuration profile",
-        "description": "GridPilot starts in shadow mode. Active battery control remains disabled until explicitly enabled from the integration options.",
+        "title": "Choose your installation",
+        "description": "Select the equipment installed in your home. GridPilot will show entity screens only for the selected equipment.",
         "data": {
-          "profile": "Configuration profile"
+          "profile": "Configuration profile",
+          "has_grid_connection": "I have a grid connection",
+          "has_pv": "I have a PV installation",
+          "has_home_battery": "I have a home battery",
+          "has_ev": "I have an electric vehicle",
+          "has_ev_charger": "I have an EV charger",
+          "has_soc_loads": "I want to control devices based on home battery SOC"
         },
         "data_description": {
           "profile": "Choose Victron to prefill common GX entity IDs. Choose Generic to select every entity manually."
         }
+      },
+      "reconfigure": {
+        "title": "Reconfigure your installation",
+        "description": "Select the equipment currently installed in your home."
+      },
+      "pv": {
+        "title": "Configure PV measurements",
+        "description": "GridPilot derives available PV surplus from the grid-power measurement.",
+        "data": {"grid_power": "Grid power"}
+      },
+      "vehicle": {
+        "title": "Configure electric vehicle measurements",
+        "description": "These measurements are optional and are used for the GridPilot dashboard and capacity calibration.",
+        "data": {"ev_vehicle_soc": "EV SOC for dashboard (optional)", "ev_charge_energy": "EV charged energy for calibration (optional)", "ev_discharge_energy": "EV discharged energy for calibration (optional)"}
+      },
+      "charger": {
+        "title": "Configure EV charger",
+        "description": "Select the entities GridPilot uses to observe and control the charger. No current is written until active EV control is enabled in the final settings screen.",
+        "data": {
+          "ev_power": "EV charging power", "ev_connection_state": "EV connection state", "ev_current_limit": "Writable EV current limit", "ev_current_feedback": "Applied EV current limit (optional)", "ev_voltage": "EV phase voltage", "ev_phase_mode": "EV phase mode", "ev_manual_current": "Manual EV current (optional)", "ev_battery_soc": "Secondary battery SOC (optional)", "ev_battery_min_soc": "Battery-to-EV minimum SOC (optional)", "ev_battery_time_to_go": "Battery time to go (optional)", "ev_battery_target_time": "Battery-to-EV target time (optional)", "battery_energy": "Remaining home battery energy (optional)", "battery_charge_energy": "Home battery charged energy for calibration (optional)", "battery_discharge_energy": "Home battery discharged energy for calibration (optional)"
+        }
+      },
+      "soc_loads": {
+        "title": "Configure SOC-controlled devices",
+        "description": "Configure each device and its own on and off SOC thresholds."
+      },
+      "soc_load_device": {
+        "title": "Configure SOC-controlled device",
+        "description": "Choose a device and its switching thresholds. Choose Never to leave an action to manual control.",
+        "data": {"soc_load_entity": "Device", "soc_load_on_threshold": "Turn on at SOC", "soc_load_off_threshold": "Turn off at SOC", "remove_soc_load": "Remove this device"}
+      },
+      "soc_load_add": {
+        "title": "Add another SOC-controlled device",
+        "description": "Enable this to configure another device; otherwise continue to the GridPilot settings.",
+        "data": {"add_another_soc_load": "Add another device"}
+      },
+      "settings": {
+        "title": "Configure GridPilot settings",
+        "description": "These are GridPilot-specific settings. Active control remains disabled by default.",
+        "data": {"max_grid_power": "Maximum grid import", "charge_soc": "SOC for full home-load compensation", "enable_actuation": "Enable active battery control", "enable_soc_load_actuation": "Enable SOC-controlled devices", "soc_load_on_threshold": "SOC to turn devices on", "soc_load_off_threshold": "SOC to turn devices off", "enable_ev_actuation": "Enable active EV current control", "battery_charge_positive": "Positive battery power means charging", "ev_priority": "PV priority for EV", "ev_max_current": "Maximum EV current", "pv_safety_margin": "PV safety margin"}
       },
       "battery": {
         "title": "Configure battery measurements",
@@ -29,6 +75,7 @@
         "description": "Select either one total home-load sensor or all three phase sensors.",
         "data": {
           "grid_setpoint": "Grid setpoint output",
+          "grid_power": "Grid power",
           "home_load": "Total home load (optional)",
           "home_load_l1": "Home load phase L1 (optional)",
           "home_load_l2": "Home load phase L2 (optional)",
@@ -36,6 +83,7 @@
         },
         "data_description": {
           "grid_setpoint": "Writable number entity for the requested grid import in watts. GridPilot only writes to it when active control is explicitly enabled. Victron example: number.gx_device_ac_power_setpoint.",
+          "grid_power": "Grid power in W or kW, positive for import and negative for export. Required when PV surplus control is selected.",
           "home_load": "Sensor containing the instantaneous total home consumption in W or kW. When selected, it takes precedence over the phase sensors.",
           "home_load_l1": "Instantaneous home consumption on phase L1 in W or kW. Complete L1, L2 and L3 when no total home-load sensor is selected.",
           "home_load_l2": "Instantaneous home consumption on phase L2 in W or kW. Complete L1, L2 and L3 when no total home-load sensor is selected.",
@@ -123,26 +171,29 @@
     },
     "error": {
       "load_entities_required": "Select one total load sensor or all three phase sensors",
+      "grid_connection_required": "GridPilot requires a grid connection",
+      "home_battery_required": "GridPilot requires a home battery",
       "mode_values_must_differ": "PV, manual and battery-to-EV charging mode values must differ",
       "soc_load_threshold_order": "The off threshold must not exceed the on threshold"
     },
     "abort": {
-      "already_configured": "GridPilot is already configured"
+      "already_configured": "GridPilot is already configured",
+      "reconfigure_successful": "GridPilot was reconfigured successfully"
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Configure the battery curve",
-        "description": "GridPilot derives the maximum-charging and normal-operation thresholds 5 percentage points below and above the configured compensation SOC. Active control must not run alongside another setpoint controller.",
+        "title": "Choose your installation",
+        "description": "Select the equipment installed in your home. GridPilot will show entity screens only for the selected equipment.",
         "data": {
-          "max_grid_power": "Maximum grid import",
-          "charge_soc": "SOC for full home-load compensation",
-          "enable_actuation": "Enable active battery control",
-          "soc_load_entities": "SOC-controlled devices (optional)",
-          "soc_load_on_threshold": "SOC to turn devices on",
-          "soc_load_off_threshold": "SOC to turn devices off",
-          "enable_soc_load_actuation": "Enable SOC-controlled devices"
+          "profile": "Configuration profile",
+          "has_grid_connection": "I have a grid connection",
+          "has_pv": "I have a PV installation",
+          "has_home_battery": "I have a home battery",
+          "has_ev": "I have an electric vehicle",
+          "has_ev_charger": "I have an EV charger",
+          "has_soc_loads": "I want to control devices based on home battery SOC"
         },
         "data_description": {
           "max_grid_power": "Positive maximum permitted grid import in watts, stored inside GridPilot. Default: 2900 W.",

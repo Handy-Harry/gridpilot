@@ -118,6 +118,19 @@ def _dashboard_config(
     actuation_healthy = _gridpilot_entity(
         hass, entry, "binary_sensor", "actuation_healthy"
     )
+    home_battery_energy = _gridpilot_entity(
+        hass, entry, "sensor", "home_battery_energy"
+    )
+    home_battery_capacity = _gridpilot_entity(
+        hass, entry, "sensor", "home_battery_capacity"
+    )
+    ev_battery_energy = _gridpilot_entity(hass, entry, "sensor", "ev_battery_energy")
+    ev_energy_to_target = _gridpilot_entity(
+        hass, entry, "sensor", "ev_energy_to_target"
+    )
+    ev_battery_capacity = _gridpilot_entity(
+        hass, entry, "number", "ev_battery_capacity"
+    )
     soc_load_devices = _gridpilot_entity(hass, entry, "sensor", "soc_load_devices")
     charge_soc = float(entry.options.get(CONF_CHARGE_SOC, DEFAULT_CHARGE_SOC))
 
@@ -152,6 +165,20 @@ def _dashboard_config(
                 shadow_mode,
                 actuation_healthy,
             ),
+        },
+        {
+            "type": "entities",
+            "title": "GridPilot energie",
+            "entities": [
+                home_battery_energy,
+                home_battery_capacity,
+                ev_battery_energy,
+                ev_energy_to_target,
+                {
+                    "entity": ev_battery_capacity,
+                    "name": "EV-batterijcapaciteit (ingesteld)",
+                },
+            ],
         },
         {"type": "markdown", "content": _soc_load_markdown(soc_load_devices)},
     ]
@@ -194,19 +221,6 @@ def _ev_cards(
     )
     battery_capacity = _gridpilot_entity(
         hass, entry, "number", "ev_battery_capacity"
-    )
-    home_battery_energy = _gridpilot_entity(
-        hass, entry, "sensor", "home_battery_energy"
-    )
-    home_battery_capacity = _gridpilot_entity(
-        hass, entry, "sensor", "home_battery_capacity"
-    )
-    ev_battery_energy = _gridpilot_entity(hass, entry, "sensor", "ev_battery_energy")
-    ev_energy_to_target = _gridpilot_entity(
-        hass, entry, "sensor", "ev_energy_to_target"
-    )
-    ev_battery_capacity_learned = _gridpilot_entity(
-        hass, entry, "sensor", "ev_battery_capacity_learned"
     )
     departure_time = _gridpilot_entity(hass, entry, "time", "ev_departure_time")
     measurements_valid = _gridpilot_entity(
@@ -355,11 +369,6 @@ def _ev_cards(
                                 departure_time,
                                 departure_target_soc,
                                 battery_capacity,
-                                home_battery_energy,
-                                home_battery_capacity,
-                                ev_battery_energy,
-                                ev_energy_to_target,
-                                ev_battery_capacity_learned,
                             ],
                         },
                         {
@@ -593,21 +602,30 @@ GridPilot plant het laden vanaf nu om het doel op tijd te halen.
         "TARGET_CURRENT", target_current
     ).replace("DEPARTURE_TIME", departure_time).replace("TARGET_SOC", target_soc)
 
+
 def _soc_load_markdown(sensor: str) -> str:
     """Return the flexible-device status and SOC switching rules."""
     return """### Flexibele apparaten
 {% set devices = state_attr('SENSOR', 'devices') or [] %}
 {% set active = state_attr('SENSOR', 'active_control') %}
-{% set on_threshold = state_attr('SENSOR', 'turn_on_at_soc') %}
-{% set off_threshold = state_attr('SENSOR', 'turn_off_at_soc') %}
 {% if not devices %}
 Er zijn momenteel geen apparaten geconfigureerd voor GridPilot SOC-sturing.
 {% else %}
 {% if not active %}**Sturing is uitgeschakeld.**{% endif %}
 {% for device in devices %}
+{% set on_threshold = device.turn_on_at_soc %}
+{% set off_threshold = device.turn_off_at_soc %}
+{% set on_label = (
+  'Nooit' if on_threshold in [none, 'never']
+  else on_threshold | float | round(0) ~ '% SOC'
+) %}
+{% set off_label = (
+  'Nooit' if off_threshold in [none, 'never']
+  else off_threshold | float | round(0) ~ '% SOC'
+) %}
 - **{{ device.name }}** ({{ device.state }})
-  - Aan bij {{ on_threshold | round(0) }}% SOC
-  - Uit bij {{ off_threshold | round(0) }}% SOC
+  - Aan bij {{ on_label }}
+  - Uit bij {{ off_label }}
 {% endfor %}
 {% endif %}
 

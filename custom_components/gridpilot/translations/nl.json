@@ -3,14 +3,61 @@
   "config": {
     "step": {
       "user": {
-        "title": "Configuratieprofiel kiezen",
-        "description": "GridPilot start in schaduwmodus. Actieve batterijsturing blijft uitgeschakeld totdat ze expliciet via de integratie-opties wordt ingeschakeld.",
+        "title": "Jouw installatie kiezen",
+        "description": "Selecteer welke onderdelen thuis aanwezig zijn. GridPilot toont alleen entiteitsschermen voor de gekozen onderdelen.",
         "data": {
-          "profile": "Configuratieprofiel"
+          "profile": "Configuratieprofiel",
+          "has_grid_connection": "Ik heb een netaansluiting",
+          "has_pv": "Ik heb een PV-installatie",
+          "has_home_battery": "Ik heb een thuisbatterij",
+          "has_ev": "Ik heb een elektrische wagen",
+          "has_ev_charger": "Ik heb een laadpaal",
+          "has_soc_loads": "Ik wil apparaten aansturen op basis van de SOC van de thuisbatterij"
         },
         "data_description": {
           "profile": "Kies Victron om gangbare GX-entiteits-ID's vooraf in te vullen. Kies Generiek om elke entiteit volledig handmatig te selecteren."
         }
+      },
+      "reconfigure": {
+        "title": "Jouw installatie opnieuw configureren",
+        "description": "Selecteer welke onderdelen momenteel thuis aanwezig zijn."
+      },
+      "pv": {
+        "title": "PV-metingen configureren",
+        "description": "GridPilot leidt het beschikbare PV-overschot af uit de meting van het netvermogen.",
+        "data": {"grid_power": "Netvermogen"},
+        "data_description": {"grid_power": "Netvermogen in W of kW, positief voor afname en negatief voor injectie."}
+      },
+      "vehicle": {
+        "title": "Metingen elektrische wagen configureren",
+        "description": "Deze metingen zijn optioneel en worden gebruikt voor het GridPilot-dashboard en capaciteitskalibratie.",
+        "data": {"ev_vehicle_soc": "EV-SOC voor dashboard (optioneel)", "ev_charge_energy": "EV geladen energie voor kalibratie (optioneel)", "ev_discharge_energy": "EV ontladen energie voor kalibratie (optioneel)"}
+      },
+      "charger": {
+        "title": "Laadpaal configureren",
+        "description": "Selecteer de entiteiten waarmee GridPilot de laadpaal observeert en aanstuurt. Er wordt pas stroom ingesteld wanneer actieve EV-regeling in het laatste instellingenscherm is ingeschakeld.",
+        "data": {
+          "ev_power": "EV-laadvermogen", "ev_connection_state": "EV-verbindingsstatus", "ev_current_limit": "Schrijfbare EV-stroomlimiet", "ev_current_feedback": "Toegepaste EV-stroomlimiet (optioneel)", "ev_voltage": "EV-fasespanning", "ev_phase_mode": "EV-fasemodus", "ev_manual_current": "Handmatige EV-stroom (optioneel)", "ev_battery_soc": "Secundaire batterij-SOC (optioneel)", "ev_battery_min_soc": "Minimum-SOC batterij-naar-EV (optioneel)", "ev_battery_time_to_go": "Resterende batterijtijd (optioneel)", "ev_battery_target_time": "Doeltijd batterij-naar-EV (optioneel)", "battery_energy": "Resterende thuisbatterij-energie (optioneel)", "battery_charge_energy": "Thuisbatterij geladen energie voor kalibratie (optioneel)", "battery_discharge_energy": "Thuisbatterij ontladen energie voor kalibratie (optioneel)"
+        }
+      },
+      "soc_loads": {
+        "title": "SOC-gestuurde apparaten configureren",
+        "description": "Configureer elk apparaat met zijn eigen SOC-drempels om in en uit te schakelen."
+      },
+      "soc_load_device": {
+        "title": "SOC-gestuurd apparaat configureren",
+        "description": "Kies een apparaat en de bijhorende schakeldrempels. Kies Nooit om een actie handmatig te houden.",
+        "data": {"soc_load_entity": "Apparaat", "soc_load_on_threshold": "Aan bij SOC", "soc_load_off_threshold": "Uit bij SOC", "remove_soc_load": "Dit apparaat verwijderen"}
+      },
+      "soc_load_add": {
+        "title": "Nog een SOC-gestuurd apparaat toevoegen",
+        "description": "Schakel dit in om nog een apparaat te configureren; ga anders verder naar de GridPilot-instellingen.",
+        "data": {"add_another_soc_load": "Nog een apparaat toevoegen"}
+      },
+      "settings": {
+        "title": "GridPilot-instellingen configureren",
+        "description": "Dit zijn GridPilot-specifieke instellingen. Actieve sturing staat standaard uit.",
+        "data": {"max_grid_power": "Maximale netafname", "charge_soc": "SOC voor volledige compensatie van het huisverbruik", "enable_actuation": "Actieve batterijsturing inschakelen", "enable_soc_load_actuation": "SOC-gestuurde apparaten inschakelen", "soc_load_on_threshold": "SOC om apparaten in te schakelen", "soc_load_off_threshold": "SOC om apparaten uit te schakelen", "enable_ev_actuation": "Actieve EV-stroomregeling inschakelen", "battery_charge_positive": "Positief batterijvermogen betekent laden", "ev_priority": "PV-prioriteit voor EV", "ev_max_current": "Maximale EV-stroom", "pv_safety_margin": "PV-veiligheidsmarge"}
       },
       "battery": {
         "title": "Batterijmetingen configureren",
@@ -29,6 +76,7 @@
         "description": "Selecteer één totale verbruikssensor of alle drie de fasesensoren.",
         "data": {
           "grid_setpoint": "Netsetpoint-uitgang",
+          "grid_power": "Netvermogen",
           "home_load": "Totaal huisverbruik (optioneel)",
           "home_load_l1": "Huisverbruik fase L1 (optioneel)",
           "home_load_l2": "Huisverbruik fase L2 (optioneel)",
@@ -36,6 +84,7 @@
         },
         "data_description": {
           "grid_setpoint": "Schrijfbare getal-entiteit voor de gewenste netafname in watt. GridPilot schrijft er alleen naar wanneer actieve sturing expliciet is ingeschakeld. Victron-voorbeeld: number.gx_device_ac_power_setpoint.",
+          "grid_power": "Netvermogen in W of kW, positief voor afname en negatief voor injectie. Verplicht wanneer PV-overschotsturing is gekozen.",
           "home_load": "Sensor met het actuele totale huisverbruik in W of kW. Wanneer deze is geselecteerd, krijgt hij voorrang op de fasesensoren.",
           "home_load_l1": "Actueel huisverbruik op fase L1 in W of kW. Vul L1, L2 en L3 in wanneer geen sensor voor totaal huisverbruik is geselecteerd.",
           "home_load_l2": "Actueel huisverbruik op fase L2 in W of kW. Vul L1, L2 en L3 in wanneer geen sensor voor totaal huisverbruik is geselecteerd.",
@@ -123,24 +172,29 @@
     },
     "error": {
       "load_entities_required": "Selecteer één totale verbruikssensor of alle drie de fasesensoren",
+      "grid_connection_required": "GridPilot vereist een netaansluiting",
+      "home_battery_required": "GridPilot vereist een thuisbatterij",
       "mode_values_must_differ": "De waarden voor PV-, handmatige en batterij-naar-EV-laadmodus moeten verschillen",
       "soc_load_threshold_order": "De uitschakeldrempel mag niet hoger zijn dan de inschakeldrempel"
     },
-    "abort": {"already_configured": "GridPilot is al geconfigureerd"}
+    "abort": {
+      "already_configured": "GridPilot is al geconfigureerd",
+      "reconfigure_successful": "GridPilot is opnieuw geconfigureerd"
+    }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Batterijcurve configureren",
-        "description": "GridPilot leidt de grenzen voor maximaal bijladen en normale batterijwerking 5 procentpunt onder en boven de ingestelde compensatie-SOC af. Actieve sturing mag niet naast een andere setpointregeling werken.",
+        "title": "Jouw installatie kiezen",
+        "description": "Selecteer welke onderdelen thuis aanwezig zijn. GridPilot toont alleen entiteitsschermen voor de gekozen onderdelen.",
         "data": {
-          "max_grid_power": "Maximale netafname",
-          "charge_soc": "SOC voor volledige compensatie van het huisverbruik",
-          "enable_actuation": "Actieve batterijsturing inschakelen",
-          "soc_load_entities": "SOC-gestuurde apparaten (optioneel)",
-          "soc_load_on_threshold": "SOC om apparaten in te schakelen",
-          "soc_load_off_threshold": "SOC om apparaten uit te schakelen",
-          "enable_soc_load_actuation": "SOC-gestuurde apparaten inschakelen"
+          "profile": "Configuratieprofiel",
+          "has_grid_connection": "Ik heb een netaansluiting",
+          "has_pv": "Ik heb een PV-installatie",
+          "has_home_battery": "Ik heb een thuisbatterij",
+          "has_ev": "Ik heb een elektrische wagen",
+          "has_ev_charger": "Ik heb een laadpaal",
+          "has_soc_loads": "Ik wil apparaten aansturen op basis van de SOC van de thuisbatterij"
         },
         "data_description": {
           "max_grid_power": "Positieve maximaal toegestane netafname in watt, intern opgeslagen in GridPilot. Standaard: 2900 W.",

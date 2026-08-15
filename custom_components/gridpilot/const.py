@@ -17,6 +17,12 @@ EV_STOP_DELAY: Final = timedelta(minutes=5)
 EV_RESTART_DELAY: Final = timedelta(minutes=10)
 
 CONF_PROFILE: Final = "profile"
+CONF_HAS_GRID_CONNECTION: Final = "has_grid_connection"
+CONF_HAS_PV: Final = "has_pv"
+CONF_HAS_HOME_BATTERY: Final = "has_home_battery"
+CONF_HAS_EV: Final = "has_ev"
+CONF_HAS_EV_CHARGER: Final = "has_ev_charger"
+CONF_HAS_SOC_LOADS: Final = "has_soc_loads"
 CONF_BATTERY_SOC: Final = "battery_soc"
 CONF_BATTERY_POWER: Final = "battery_power"
 CONF_BATTERY_ENERGY: Final = "battery_energy"
@@ -54,6 +60,9 @@ CONF_EV_MAX_CURRENT: Final = "ev_max_current"
 CONF_PV_SAFETY_MARGIN: Final = "pv_safety_margin"
 CONF_ENABLE_EV_ACTUATION: Final = "enable_ev_actuation"
 CONF_SOC_LOAD_ENTITIES: Final = "soc_load_entities"
+# Individual thresholds, keyed by configured SOC-load entity IDs.
+CONF_SOC_LOAD_THRESHOLDS: Final = "soc_load_thresholds"
+# Legacy shared thresholds, retained solely to migrate existing config entries.
 CONF_SOC_LOAD_ON_THRESHOLD: Final = "soc_load_on_threshold"
 CONF_SOC_LOAD_OFF_THRESHOLD: Final = "soc_load_off_threshold"
 CONF_ENABLE_SOC_LOAD_ACTUATION: Final = "enable_soc_load_actuation"
@@ -74,6 +83,11 @@ DEFAULT_ENABLE_ACTUATION: Final = False
 DEFAULT_ENABLE_EV_ACTUATION: Final = False
 DEFAULT_SOC_LOAD_ON_THRESHOLD: Final = 90.0
 DEFAULT_SOC_LOAD_OFF_THRESHOLD: Final = 30.0
+SOC_LOAD_THRESHOLD_NEVER: Final = "never"
+SOC_LOAD_THRESHOLD_OPTIONS: Final = (
+    SOC_LOAD_THRESHOLD_NEVER,
+    *range(0, 101, 10),
+)
 DEFAULT_ENABLE_SOC_LOAD_ACTUATION: Final = False
 SOC_LOAD_DOMAINS: Final = frozenset(
     {"climate", "fan", "humidifier", "light", "media_player", "switch", "water_heater"}

@@ -138,6 +138,7 @@ def test_dashboard_uses_configured_entities() -> None:
     assert "Schaduwmodus" in rendered
     assert "Thuisbatterij naar EV" in rendered
     assert "strategy_labels" in rendered
+    assert "GridPilot energie" in rendered
     assert "Flexibele apparaten" in rendered
     assert "sensor.gridpilot_soc_load_devices" in rendered
     assert "PV-laden is gestart" in rendered
