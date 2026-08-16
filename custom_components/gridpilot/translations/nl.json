@@ -195,15 +195,6 @@
           "has_ev": "Ik heb een elektrische wagen",
           "has_ev_charger": "Ik heb een laadpaal",
           "has_soc_loads": "Ik wil apparaten aansturen op basis van de SOC van de thuisbatterij"
-        },
-        "data_description": {
-          "max_grid_power": "Positieve maximaal toegestane netafname in watt, intern opgeslagen in GridPilot. Standaard: 2900 W.",
-          "charge_soc": "Op deze SOC is het berekende setpoint gelijk aan het actuele huisverbruik. Maximaal bijladen start 5 procentpunt lager en normale batterijwerking start 5 procentpunt hoger. Standaard: 15%.",
-          "enable_actuation": "Gevaar: schakel dit alleen in nadat elke andere regeling die naar het netsetpoint schrijft is uitgeschakeld. Ongeldige meetwaarden en ontladen van de integratie zetten het setpoint terug op 0 W. Standaard: uit.",
-          "soc_load_entities": "Schakel-, klimaat-, licht-, ventilator-, boiler-, bevochtiger- en mediaspelerentiteiten die GridPilot op basis van de SOC van de thuisbatterij mag in- en uitschakelen.",
-          "soc_load_on_threshold": "Schakel de geselecteerde apparaten in bij of boven deze SOC van de thuisbatterij.",
-          "soc_load_off_threshold": "Schakel de geselecteerde apparaten uit bij of onder deze SOC van de thuisbatterij. Houd deze waarde lager dan de inschakeldrempel om pendelen te voorkomen.",
-          "enable_soc_load_actuation": "Gevaar: GridPilot schakelt de geselecteerde apparaten actief in en uit. Standaard: uit."
         }
       },
       "ev": {

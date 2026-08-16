@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.5 - 2026-08-15
+
+- Restore Home Assistant translation validation by removing obsolete options-flow
+  descriptions that no longer match the guided configuration flow.
+
 ## 1.3.4 - 2026-08-15
 
 - Configure SOC-controlled devices individually with their own on and off
