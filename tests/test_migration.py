@@ -18,6 +18,7 @@ from custom_components.gridpilot.const import (
     CONF_MAX_GRID_POWER,
     CONF_MINIMUM_SOC,
     CONF_NORMAL_SOC,
+    CONF_PRELOAD,
     CONF_SOC_LOAD_ENTITIES,
     CONF_SOC_LOAD_OFF_THRESHOLD,
     CONF_SOC_LOAD_ON_THRESHOLD,
@@ -44,13 +45,12 @@ async def test_migrate_grid_limit_entity_to_options(hass: HomeAssistant) -> None
     entry.add_to_hass(hass)
 
     assert await async_migrate_entry(hass, entry)
-    assert entry.version == 18
+    assert entry.version == 19
     assert CONF_MAX_GRID_POWER not in entry.data
     assert entry.options == {
         CONF_MAX_GRID_POWER: 2900,
         CONF_CHARGE_SOC: 15,
-        CONF_AUTO_CHARGE_SOC_SOLAR: False,
-        CONF_AUTO_CHARGE_SOC_SOLAR_EV: False,
+        CONF_PRELOAD: False,
         CONF_GRIDPILOT_EV_MODE: DEFAULT_EV_MODE,
         CONF_SOC_LOAD_THRESHOLDS: {},
         **_default_energy_meters(),
@@ -69,7 +69,7 @@ async def test_migration_preserves_unavailable_grid_limit_entity(
     entry.add_to_hass(hass)
 
     assert await async_migrate_entry(hass, entry)
-    assert entry.version == 18
+    assert entry.version == 19
     assert entry.data[CONF_MAX_GRID_POWER] == "sensor.unavailable_grid_limit"
     assert CONF_MAX_GRID_POWER not in entry.options
 
@@ -91,12 +91,13 @@ async def test_migrate_soc_curve_to_single_threshold(hass: HomeAssistant) -> Non
     entry.add_to_hass(hass)
 
     assert await async_migrate_entry(hass, entry)
-    assert entry.version == 18
+    assert entry.version == 19
     assert entry.options == {
         CONF_MAX_GRID_POWER: 2900,
         CONF_CHARGE_SOC: 17,
         CONF_ENABLE_ACTUATION: True,
         CONF_GRIDPILOT_EV_MODE: DEFAULT_EV_MODE,
+        CONF_PRELOAD: False,
         CONF_SOC_LOAD_THRESHOLDS: {},
         **_default_energy_meters(),
     }
@@ -122,10 +123,11 @@ async def test_version_three_migration_preserves_all_options(
     entry.add_to_hass(hass)
 
     assert await async_migrate_entry(hass, entry)
-    assert entry.version == 18
+    assert entry.version == 19
     assert entry.options == {
         **options,
         CONF_GRIDPILOT_EV_MODE: DEFAULT_EV_MODE,
+        CONF_PRELOAD: False,
         CONF_SOC_LOAD_THRESHOLDS: {},
         **_default_energy_meters(),
     }
@@ -149,11 +151,12 @@ async def test_version_four_migration_preserves_ev_options(
     entry.add_to_hass(hass)
 
     assert await async_migrate_entry(hass, entry)
-    assert entry.version == 18
+    assert entry.version == 19
     assert entry.options == {
         CONF_MAX_GRID_POWER: 2900,
         "enable_ev_actuation": False,
         CONF_GRIDPILOT_EV_MODE: DEFAULT_EV_MODE,
+        CONF_PRELOAD: False,
         CONF_SOC_LOAD_THRESHOLDS: {},
         **_default_energy_meters(),
     }
@@ -171,7 +174,7 @@ async def test_victron_migration_configures_capacity_energy_meters(
     entry.add_to_hass(hass)
 
     assert await async_migrate_entry(hass, entry)
-    assert entry.version == 18
+    assert entry.version == 19
     assert entry.options[CONF_BATTERY_ENERGY] == "sensor.batterij_resterende_energie"
     assert entry.options[CONF_BATTERY_CHARGE_ENERGY] == (
         "sensor.gx_device_dc_battery_charge_energy"
@@ -198,13 +201,31 @@ async def test_migrate_shared_soc_load_thresholds(hass: HomeAssistant) -> None:
     entry.add_to_hass(hass)
 
     assert await async_migrate_entry(hass, entry)
-    assert entry.version == 18
+    assert entry.version == 19
     assert entry.options == {
         CONF_SOC_LOAD_ENTITIES: ["switch.flexible_load"],
         CONF_SOC_LOAD_THRESHOLDS: {
             "switch.flexible_load": {"on": "90", "off": "30"}
         },
+        CONF_PRELOAD: False,
     }
+
+
+async def test_migrate_auto_charge_modes_to_preload(hass: HomeAssistant) -> None:
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        version=18,
+        data={},
+        options={
+            CONF_AUTO_CHARGE_SOC_SOLAR: False,
+            CONF_AUTO_CHARGE_SOC_SOLAR_EV: True,
+        },
+    )
+    entry.add_to_hass(hass)
+
+    assert await async_migrate_entry(hass, entry)
+    assert entry.version == 19
+    assert entry.options == {CONF_PRELOAD: True}
 
 
 def _default_energy_meters() -> dict[str, str]:

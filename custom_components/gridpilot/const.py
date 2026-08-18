@@ -5,7 +5,7 @@ from typing import Final
 
 DOMAIN: Final = "gridpilot"
 NAME: Final = "GridPilot"
-VERSION: Final = "1.4.6"
+VERSION: Final = "1.4.8"
 
 PLATFORMS: Final = ["sensor", "binary_sensor", "number", "switch"]
 UPDATE_INTERVAL: Final = timedelta(minutes=1)
@@ -42,6 +42,7 @@ CONF_MINIMUM_SOC: Final = "minimum_soc"
 CONF_CHARGE_SOC: Final = "charge_soc"
 CONF_AUTO_CHARGE_SOC_SOLAR: Final = "auto_charge_soc_solar"
 CONF_AUTO_CHARGE_SOC_SOLAR_EV: Final = "auto_charge_soc_solar_ev"
+CONF_PRELOAD: Final = "preload"
 CONF_NORMAL_SOC: Final = "normal_soc"
 CONF_ENABLE_ACTUATION: Final = "enable_actuation"
 CONF_GRID_POWER: Final = "grid_power"
@@ -86,6 +87,8 @@ CAPACITY_SMOOTHING: Final = 0.25
 DEFAULT_CHARGE_SOC: Final = 15.0
 DEFAULT_AUTO_CHARGE_SOC_SOLAR: Final = False
 DEFAULT_AUTO_CHARGE_SOC_SOLAR_EV: Final = False
+DEFAULT_PRELOAD: Final = False
+PRELOAD_BASE_SOC: Final = 50.0
 PV_FORECAST_REMAINING_ENTITY: Final = (
     "sensor.victron_remote_monitoring_estimated_energy_production_today_remaining"
 )

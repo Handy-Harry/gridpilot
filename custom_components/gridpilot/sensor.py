@@ -137,6 +137,40 @@ class DepartureBatteryPowerSensor(GridPilotEntity, SensorEntity):
         return self.controller.departure_battery_power
 
 
+class DesiredChargeSOCSensor(GridPilotEntity, SensorEntity):
+    """Expose the forecast-based home battery SOC target for preloading."""
+
+    _attr_translation_key = "desired_charge_soc"
+    _attr_native_unit_of_measurement = "%"
+    _attr_device_class = SensorDeviceClass.BATTERY
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, entry: GridPilotConfigEntry) -> None:
+        super().__init__(entry)
+        self._attr_unique_id = f"{entry.entry_id}_desired_charge_soc"
+
+    @property
+    def native_value(self) -> float | None:
+        return self.controller.desired_charge_soc
+
+
+class ActiveChargeSOCSensor(GridPilotEntity, SensorEntity):
+    """Expose the SOC target currently used to control the home battery."""
+
+    _attr_translation_key = "active_charge_soc"
+    _attr_native_unit_of_measurement = "%"
+    _attr_device_class = SensorDeviceClass.BATTERY
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, entry: GridPilotConfigEntry) -> None:
+        super().__init__(entry)
+        self._attr_unique_id = f"{entry.entry_id}_active_charge_soc"
+
+    @property
+    def native_value(self) -> float:
+        return self.controller.active_charge_soc
+
+
 class HomeBatteryEnergySensor(GridPilotEntity, SensorEntity):
     """Expose home-battery energy available above the reserve SOC."""
 
@@ -411,6 +445,8 @@ async def async_setup_entry(
             AvailablePVPowerSensor(entry),
             EVTargetCurrentSensor(entry),
             DepartureBatteryPowerSensor(entry),
+            DesiredChargeSOCSensor(entry),
+            ActiveChargeSOCSensor(entry),
             HomeBatteryEnergySensor(entry),
             EVBatteryEnergySensor(entry),
             EVEnergyToTargetSensor(entry),

@@ -31,8 +31,6 @@ from homeassistant.util import dt as dt_util
 from .calculations import BatteryCurve, calculate_battery_decision, normalize_power
 from .capacity import CapacitySample, update_capacity_sample
 from .const import (
-    CONF_AUTO_CHARGE_SOC_SOLAR,
-    CONF_AUTO_CHARGE_SOC_SOLAR_EV,
     CONF_BATTERY_CAPACITY,
     CONF_BATTERY_CHARGE_ENERGY,
     CONF_BATTERY_CHARGE_POSITIVE,
@@ -74,13 +72,12 @@ from .const import (
     CONF_HOME_LOAD_L2,
     CONF_HOME_LOAD_L3,
     CONF_MAX_GRID_POWER,
+    CONF_PRELOAD,
     CONF_PV_SAFETY_MARGIN,
     CONF_SOC_LOAD_ENTITIES,
     CONF_SOC_LOAD_OFF_THRESHOLD,
     CONF_SOC_LOAD_ON_THRESHOLD,
     CONSUMPTION_FORECAST_REMAINING_ENTITY,
-    DEFAULT_AUTO_CHARGE_SOC_SOLAR,
-    DEFAULT_AUTO_CHARGE_SOC_SOLAR_EV,
     DEFAULT_BATTERY_CAPACITY,
     DEFAULT_BATTERY_CHARGE_POSITIVE,
     DEFAULT_CHARGE_SOC,
@@ -100,6 +97,7 @@ from .const import (
     DEFAULT_EV_PRIORITY,
     DEFAULT_EV_PV_MODE,
     DEFAULT_MAX_GRID_POWER,
+    DEFAULT_PRELOAD,
     DEFAULT_PV_SAFETY_MARGIN,
     DEFAULT_SOC_LOAD_OFF_THRESHOLD,
     DEFAULT_SOC_LOAD_ON_THRESHOLD,
@@ -137,6 +135,7 @@ from .const import (
     INPUT_SETTLE_DELAY,
     MIN_ACTUATION_INTERVAL,
     MODE_UNAVAILABLE,
+    PRELOAD_BASE_SOC,
     PV_FORECAST_REMAINING_ENTITY,
     SOC_LOAD_DOMAINS,
     UPDATE_INTERVAL,
@@ -219,6 +218,7 @@ class GridPilotController:
         self._departure_ev_current: float | None = None
         self._departure_ev_plan: tuple[float | int | str, ...] | None = None
         self._calculated_ev_soc: float | None = None
+        self.desired_charge_soc: float | None = None
         self._last_measured_ev_soc: float | None = None
         self._ev_soc_anchor_soc: float | None = None
         self._ev_soc_anchor_energy: float | None = None
@@ -272,20 +272,13 @@ class GridPilotController:
         )
         await self.async_refresh()
 
-    async def async_update_auto_charge_soc_mode(
-        self, option: str, enabled: bool
-    ) -> None:
-        """Persist an exclusive automatic charge-SOC mode."""
-        options = {**self.entry.options, option: enabled}
-        if enabled:
-            other_option = (
-                CONF_AUTO_CHARGE_SOC_SOLAR_EV
-                if option == CONF_AUTO_CHARGE_SOC_SOLAR
-                else CONF_AUTO_CHARGE_SOC_SOLAR
-            )
-            options[other_option] = False
+    async def async_update_preload(self, enabled: bool) -> None:
+        """Persist whether GridPilot may use the calculated desired SOC."""
         self._skip_next_options_reload += 1
-        self.hass.config_entries.async_update_entry(self.entry, options=options)
+        self.hass.config_entries.async_update_entry(
+            self.entry,
+            options={**self.entry.options, CONF_PRELOAD: enabled},
+        )
         await self.async_refresh()
 
     def consume_options_reload_skip(self) -> bool:
@@ -297,15 +290,6 @@ class GridPilotController:
 
     async def async_start(self) -> None:
         """Start state and interval tracking."""
-        if (
-            self.entry.options.get(CONF_AUTO_CHARGE_SOC_SOLAR)
-            and self.entry.options.get(CONF_AUTO_CHARGE_SOC_SOLAR_EV)
-        ):
-            self._skip_next_options_reload += 1
-            self.hass.config_entries.async_update_entry(
-                self.entry,
-                options={**self.entry.options, CONF_AUTO_CHARGE_SOC_SOLAR: False},
-            )
         source_entities = {
             value
             for key, value in self.entry.data.items()
@@ -468,23 +452,8 @@ class GridPilotController:
             try:
                 self._update_calculated_ev_soc()
                 try:
-                    self._update_auto_charge_soc()
-                    soc = self._numeric_state(self.entry.data[CONF_BATTERY_SOC])
-                    home_load = self._home_load()
-                    options = self.entry.options
-                    max_grid_power = self._max_grid_power()
-                    curve = BatteryCurve(
-                        charge_soc=float(
-                            options.get(CONF_CHARGE_SOC, DEFAULT_CHARGE_SOC)
-                        ),
-                        minimum_charge_power=max_grid_power * 0.1,
-                    )
-                    self.decision = calculate_battery_decision(
-                        soc=soc,
-                        home_load=home_load,
-                        max_grid_power=max_grid_power,
-                        curve=curve,
-                    )
+                    self._update_desired_charge_soc()
+                    self._calculate_battery_decision()
                 except (KeyError, TypeError, ValueError) as err:
                     self.decision = ControlDecision(
                         valid=False,
@@ -494,6 +463,8 @@ class GridPilotController:
                     _LOGGER.debug("Unable to calculate GridPilot decision: %s", err)
 
                 self._calculate_ev_decision()
+                if self.decision.valid:
+                    self._calculate_battery_decision()
                 await self._async_calibrate_capacities()
                 self._apply_departure_grid_plan()
                 await self._async_apply_decision()
@@ -505,21 +476,10 @@ class GridPilotController:
             finally:
                 self._input_snapshot = None
 
-    def _update_auto_charge_soc(self) -> None:
-        """Update the charge SOC from valid remaining-energy forecasts."""
+    def _update_desired_charge_soc(self) -> None:
+        """Calculate the desired SOC from forecasts and the EV energy shortfall."""
         options = self.entry.options
-        solar_mode = bool(
-            options.get(CONF_AUTO_CHARGE_SOC_SOLAR, DEFAULT_AUTO_CHARGE_SOC_SOLAR)
-        )
-        solar_ev_mode = bool(
-            options.get(
-                CONF_AUTO_CHARGE_SOC_SOLAR_EV,
-                DEFAULT_AUTO_CHARGE_SOC_SOLAR_EV,
-            )
-        )
-        if not solar_mode and not solar_ev_mode:
-            return
-
+        self.desired_charge_soc = None
         try:
             production = self._energy_state(PV_FORECAST_REMAINING_ENTITY)
             consumption = self._energy_state(CONSUMPTION_FORECAST_REMAINING_ENTITY)
@@ -529,36 +489,65 @@ class GridPilotController:
             if battery_capacity <= 0:
                 raise ValueError("Usable home-battery capacity must be positive")
 
-            ev_needed = 0.0
-            if solar_ev_mode:
-                if self._calculated_ev_soc is None:
-                    raise ValueError("EV SOC is unavailable")
-                ev_capacity = float(
-                    options.get(CONF_EV_BATTERY_CAPACITY, DEFAULT_EV_BATTERY_CAPACITY)
+            if self._calculated_ev_soc is None:
+                raise ValueError("EV SOC is unavailable")
+            ev_capacity = float(
+                options.get(CONF_EV_BATTERY_CAPACITY, DEFAULT_EV_BATTERY_CAPACITY)
+            )
+            ev_target = float(
+                options.get(
+                    CONF_EV_DEPARTURE_TARGET_SOC, DEFAULT_EV_DEPARTURE_TARGET_SOC
                 )
-                ev_target = float(
-                    options.get(
-                        CONF_EV_DEPARTURE_TARGET_SOC,
-                        DEFAULT_EV_DEPARTURE_TARGET_SOC,
-                    )
-                )
-                ev_needed = (
-                    ev_capacity * max(0.0, ev_target - self._calculated_ev_soc) / 100
-                )
-
-            deficit = max(0.0, consumption + ev_needed - production)
-            target = max(15.0, min(95.0, 15.0 + deficit / battery_capacity * 100))
-            target = round(target / 5) * 5
+            )
+            ev_shortfall = (
+                ev_capacity
+                * max(0.0, ev_target - self._calculated_ev_soc)
+                / 100
+                / EV_CHARGING_EFFICIENCY
+            )
+            pv_for_ev = max(0.0, production - consumption)
+            target = PRELOAD_BASE_SOC + (
+                max(0.0, ev_shortfall - pv_for_ev) / battery_capacity * 100
+            )
+            self.desired_charge_soc = float(
+                max(PRELOAD_BASE_SOC, min(95.0, round(target / 5) * 5))
+            )
         except (TypeError, ValueError) as err:
-            _LOGGER.debug("Automatic charge SOC keeps the manual value: %s", err)
-            return
+            _LOGGER.debug("Desired SOC is unavailable: %s", err)
 
-        current = float(options.get(CONF_CHARGE_SOC, DEFAULT_CHARGE_SOC))
-        if math.isclose(current, target, abs_tol=0.001):
-            return
-        self._skip_next_options_reload += 1
-        self.hass.config_entries.async_update_entry(
-            self.entry, options={**options, CONF_CHARGE_SOC: target}
+    def _active_charge_soc(self) -> float:
+        """Return the SOC target currently allowed to control battery charging."""
+        reserve_soc = float(
+            self.entry.options.get(CONF_CHARGE_SOC, DEFAULT_CHARGE_SOC)
+        )
+        departure_charging = (
+            self.ev_decision.strategy == EV_STRATEGY_DEPARTURE
+            and self.ev_decision.mode == EV_MODE_CHARGING
+            and (self.ev_decision.requested_current or EV_PAUSE_CURRENT)
+            > EV_PAUSE_CURRENT
+        )
+        if (
+            not self.entry.options.get(CONF_PRELOAD, DEFAULT_PRELOAD)
+            or departure_charging
+            or self.desired_charge_soc is None
+        ):
+            return reserve_soc
+        return self.desired_charge_soc
+
+    def _calculate_battery_decision(self) -> None:
+        """Calculate the battery decision using the currently active SOC target."""
+        soc = self._numeric_state(self.entry.data[CONF_BATTERY_SOC])
+        home_load = self._home_load()
+        max_grid_power = self._max_grid_power()
+        curve = BatteryCurve(
+            charge_soc=self._active_charge_soc(),
+            minimum_charge_power=max_grid_power * 0.1,
+        )
+        self.decision = calculate_battery_decision(
+            soc=soc,
+            home_load=home_load,
+            max_grid_power=max_grid_power,
+            curve=curve,
         )
 
     async def _async_calibrate_capacities(self) -> None:
@@ -1794,6 +1783,11 @@ class GridPilotController:
         return self._calculated_ev_soc
 
     @property
+    def active_charge_soc(self) -> float:
+        """Return the SOC target used by the current battery decision."""
+        return self._active_charge_soc()
+
+    @property
     def last_measured_ev_soc(self) -> float | None:
         """Return the most recent SOC reported by the vehicle."""
         return self._last_measured_ev_soc
@@ -1810,6 +1804,11 @@ class GridPilotController:
                 "home_load": self.decision.home_load,
                 "max_grid_power": self.decision.max_grid_power,
                 "requested_grid_setpoint": self.decision.requested_grid_setpoint,
+                "reserve_soc": float(
+                    self.entry.options.get(CONF_CHARGE_SOC, DEFAULT_CHARGE_SOC)
+                ),
+                "desired_soc": self.desired_charge_soc,
+                "active_soc": self.active_charge_soc,
             },
             "actuation": {
                 "enabled": self.actuation_enabled,

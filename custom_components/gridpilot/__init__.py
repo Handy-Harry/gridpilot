@@ -30,6 +30,7 @@ from .const import (
     CONF_MAX_GRID_POWER,
     CONF_MINIMUM_SOC,
     CONF_NORMAL_SOC,
+    CONF_PRELOAD,
     CONF_SOC_LOAD_ENTITIES,
     CONF_SOC_LOAD_OFF_THRESHOLD,
     CONF_SOC_LOAD_ON_THRESHOLD,
@@ -38,6 +39,7 @@ from .const import (
     DEFAULT_AUTO_CHARGE_SOC_SOLAR_EV,
     DEFAULT_CHARGE_SOC,
     DEFAULT_EV_MODE,
+    DEFAULT_PRELOAD,
     DEFAULT_SOC_LOAD_OFF_THRESHOLD,
     DEFAULT_SOC_LOAD_ON_THRESHOLD,
     VERSION,
@@ -110,7 +112,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) ->
 
 async def async_migrate_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) -> bool:
     """Migrate legacy control parameters and SOC thresholds."""
-    if entry.version > 18:
+    if entry.version > 19:
         return False
 
     data = dict(entry.data)
@@ -276,6 +278,14 @@ async def async_migrate_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) 
                 },
             )
         version = 18
+
+    if version == 18:
+        options[CONF_PRELOAD] = bool(
+            options.pop(CONF_AUTO_CHARGE_SOC_SOLAR, False)
+            or options.pop(CONF_AUTO_CHARGE_SOC_SOLAR_EV, False)
+        )
+        options.setdefault(CONF_PRELOAD, DEFAULT_PRELOAD)
+        version = 19
 
     if version != entry.version or data != entry.data or options != entry.options:
         hass.config_entries.async_update_entry(

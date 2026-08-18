@@ -47,7 +47,7 @@ class EVPriorityNumber(GridPilotEntity, NumberEntity):
 
 
 class ChargeSOCNumber(GridPilotEntity, NumberEntity):
-    """Set the SOC where GridPilot fully compensates the home load."""
+    """Set the battery reserve SOC used when preloading is inactive."""
 
     _attr_translation_key = "charge_soc"
     _attr_native_min_value = DEFAULT_CHARGE_SOC

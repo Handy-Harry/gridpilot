@@ -128,11 +128,12 @@ def _dashboard_config(
         hass, entry, "number", "home_battery_capacity_configured"
     )
     charge_soc_entity = _gridpilot_entity(hass, entry, "number", "charge_soc")
-    auto_charge_soc_solar = _gridpilot_entity(
-        hass, entry, "switch", "auto_charge_soc_solar"
+    preload = _gridpilot_entity(hass, entry, "switch", "preload")
+    desired_charge_soc = _gridpilot_entity(
+        hass, entry, "sensor", "desired_charge_soc"
     )
-    auto_charge_soc_solar_ev = _gridpilot_entity(
-        hass, entry, "switch", "auto_charge_soc_solar_ev"
+    active_charge_soc = _gridpilot_entity(
+        hass, entry, "sensor", "active_charge_soc"
     )
     ev_battery_energy = _gridpilot_entity(hass, entry, "sensor", "ev_battery_energy")
     ev_energy_to_target = _gridpilot_entity(
@@ -143,7 +144,6 @@ def _dashboard_config(
     )
     soc_load_devices = _gridpilot_entity(hass, entry, "sensor", "soc_load_devices")
     charge_soc = float(entry.options.get(CONF_CHARGE_SOC, DEFAULT_CHARGE_SOC))
-
     battery_cards: list[dict[str, Any]] = [
         {
             "type": "heading",
@@ -159,7 +159,8 @@ def _dashboard_config(
             "power_charge_positive": entry.options.get(
                 CONF_BATTERY_CHARGE_POSITIVE, DEFAULT_BATTERY_CHARGE_POSITIVE
             ),
-            "charge_entity": charge_soc_entity,
+            "charge_entity": active_charge_soc,
+            "target_entity": desired_charge_soc,
             "threshold_offset": SOC_THRESHOLD_OFFSET,
             "minimum_soc": charge_soc - SOC_THRESHOLD_OFFSET,
             "charge_below": charge_soc,
@@ -174,7 +175,7 @@ def _dashboard_config(
                 {
                     "type": "tile",
                     "entity": charge_soc_entity,
-                    "name": "Bijladen vanaf SOC",
+                    "name": "Reserve SOC",
                     "icon": "mdi:battery-charging-medium",
                     "features": [{"type": "numeric-input", "style": "slider"}],
                 },
@@ -183,15 +184,15 @@ def _dashboard_config(
                     "cards": [
                         {
                             "type": "tile",
-                            "entity": auto_charge_soc_solar,
-                            "name": "Bijlaadpunt op zon",
-                            "icon": "mdi:weather-sunny",
+                            "entity": desired_charge_soc,
+                            "name": "Gewenste SOC",
+                            "icon": "mdi:battery-arrow-up",
                         },
                         {
                             "type": "tile",
-                            "entity": auto_charge_soc_solar_ev,
-                            "name": "Bijlaadpunt op zon en EV",
-                            "icon": "mdi:car-electric",
+                            "entity": preload,
+                            "name": "Voorladen",
+                            "icon": "mdi:battery-clock",
                         },
                     ],
                 },

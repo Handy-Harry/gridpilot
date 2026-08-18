@@ -256,11 +256,8 @@
   },
   "entity": {
     "switch": {
-      "auto_charge_soc_solar": {
-        "name": "Bijlaad-SOC op zonvoorspelling"
-      },
-      "auto_charge_soc_solar_ev": {
-        "name": "Bijlaad-SOC op zonvoorspelling en EV"
+      "preload": {
+        "name": "Voorladen"
       }
     },
     "number": {
@@ -268,7 +265,7 @@
         "name": "PV-prioriteit EV"
       },
       "charge_soc": {
-        "name": "Bijladen vanaf SOC"
+        "name": "Reserve SOC"
       },
       "ev_departure_target_soc": {
         "name": "EV-doel-SOC bij vertrek"
@@ -307,6 +304,8 @@
       "available_pv_power": {"name": "Beschikbaar PV-vermogen"},
       "ev_target_current": {"name": "EV-doelstroom"},
       "departure_battery_power": {"name": "Gepland thuisbatterijvermogen voor vertrek"},
+      "desired_charge_soc": {"name": "Gewenste SOC"},
+      "active_charge_soc": {"name": "Actief SOC-doel"},
       "home_battery_energy": {"name": "Thuisbatterij-energie boven reserve"},
       "ev_battery_energy": {"name": "EV-batterijenergie"},
       "ev_energy_to_target": {"name": "EV-energie nodig tot doel"},

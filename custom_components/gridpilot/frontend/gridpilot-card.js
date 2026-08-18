@@ -107,7 +107,7 @@ class GridPilotCard extends HTMLElement {
           border-left-color: color-mix(in srgb, #f59e0b 72%, transparent);
         }
         .target-threshold {
-          border-left-color: color-mix(in srgb, #64748b 88%, transparent);
+          border-left-color: color-mix(in srgb, #2563eb 88%, transparent);
           border-left-style: solid;
         }
         .terminal {

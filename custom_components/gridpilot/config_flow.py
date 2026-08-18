@@ -98,7 +98,7 @@ def _multiple_entity_selector(domains: list[str]) -> selector.EntitySelector:
 class GridPilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle the GridPilot setup flow."""
 
-    VERSION = 18
+    VERSION = 19
     MINOR_VERSION = 0
 
     def __init__(self) -> None:

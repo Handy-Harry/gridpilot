@@ -4,7 +4,8 @@
     "sensor": {
       "calculated_grid_setpoint": {"default": "mdi:transmission-tower-import"},
       "operating_mode": {"default": "mdi:state-machine"},
-      "control_reason": {"default": "mdi:text-box-search-outline"}
+      "control_reason": {"default": "mdi:text-box-search-outline"},
+      "desired_charge_soc": {"default": "mdi:battery-arrow-up"}
     },
     "binary_sensor": {
       "measurements_valid": {"default": "mdi:check-decagram-outline"},
