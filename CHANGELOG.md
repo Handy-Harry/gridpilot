@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.4.8 - 2026-08-18
+
+- Split the home-battery target into a manual Reserve SOC and a forecast-based
+  Desired SOC.
+- Replace the two automatic charge-SOC switches with one Preload switch and
+  migrate existing settings.
+- Calculate the Desired SOC from the remaining solar forecast, expected home
+  consumption and the EV energy shortfall.
+- Use Reserve SOC while the EV actively charges in departure-time mode so the
+  home battery can discharge toward the EV target.
+- Show the desired target as a blue marker on the home-battery dashboard card.
+
 ## 1.4.6 - 2026-08-18
 
 - Add coordinated input settling so GridPilot calculates from a consistent set of
