@@ -24,9 +24,9 @@
       },
       "pv": {
         "title": "Configure PV measurements",
-        "description": "GridPilot derives available PV surplus from the grid-power measurement.",
+        "description": "GridPilot uses grid export as extra PV surplus only while the home battery is full.",
         "data": {"grid_power": "Grid power"},
-        "data_description": {"grid_power": "Grid power in W or kW, positive for import and negative for export."}
+        "data_description": {"grid_power": "Grid power in W or kW. Only negative export is used, and only while battery-full hysteresis is active."}
       },
       "vehicle": {
         "title": "Configure electric vehicle measurements",
@@ -84,7 +84,7 @@
         },
         "data_description": {
           "grid_setpoint": "Writable number entity for the requested grid import in watts. GridPilot only writes to it when active control is explicitly enabled. Victron example: number.gx_device_ac_power_setpoint.",
-          "grid_power": "Grid power in W or kW, positive for import and negative for export. Required when PV surplus control is selected.",
+          "grid_power": "Grid power in W or kW. GridPilot only uses negative export as PV surplus while the home battery is full.",
           "home_load": "Sensor containing the instantaneous total home consumption in W or kW. When selected, it takes precedence over the phase sensors.",
           "home_load_l1": "Instantaneous home consumption on phase L1 in W or kW. Complete L1, L2 and L3 when no total home-load sensor is selected.",
           "home_load_l2": "Instantaneous home consumption on phase L2 in W or kW. Complete L1, L2 and L3 when no total home-load sensor is selected.",
@@ -121,7 +121,7 @@
           "enable_ev_actuation": "Enable active EV current control"
         },
         "data_description": {
-          "grid_power": "Grid power in W or kW, positive for import and negative for export.",
+          "grid_power": "Grid power in W or kW. Only negative export is used while the home battery is full.",
           "ev_power": "Current EV charging power in W or kW.",
           "ev_vehicle_soc": "Optional vehicle state-of-charge sensor shown on the GridPilot dashboard.",
           "ev_connection_state": "Entity whose state indicates whether an EV is connected.",
@@ -222,7 +222,7 @@
           "enable_ev_actuation": "Enable active EV current control"
         },
         "data_description": {
-          "grid_power": "Grid power in W or kW, positive for import and negative for export.",
+          "grid_power": "Grid power in W or kW. Only negative export is used while the home battery is full.",
           "ev_power": "Current EV charging power in W or kW.",
           "ev_vehicle_soc": "Optional vehicle state-of-charge sensor shown on the GridPilot dashboard.",
           "ev_connection_state": "Entity whose state indicates whether an EV is connected.",
@@ -258,9 +258,20 @@
     }
   },
   "entity": {
+    "switch": {
+      "auto_charge_soc_solar": {
+        "name": "Charge SOC from solar forecast"
+      },
+      "auto_charge_soc_solar_ev": {
+        "name": "Charge SOC from solar forecast and EV"
+      }
+    },
     "number": {
       "ev_priority": {
         "name": "EV priority"
+      },
+      "charge_soc": {
+        "name": "Charge SOC"
       },
       "ev_departure_target_soc": {
         "name": "EV target SOC at departure"
@@ -296,9 +307,11 @@
       "available_pv_power": {"name": "Available PV power"},
       "ev_target_current": {"name": "EV target current"},
       "departure_battery_power": {"name": "Planned home battery power for departure"},
-      "home_battery_energy": {"name": "Remaining home battery energy"},
+      "home_battery_energy": {"name": "Home battery energy above reserve"},
       "ev_battery_energy": {"name": "EV battery energy"},
       "ev_energy_to_target": {"name": "EV energy needed to target"},
+      "calculated_ev_soc": {"name": "Calculated EV SOC"},
+      "last_measured_ev_soc": {"name": "Last measured EV SOC"},
       "home_battery_capacity": {"name": "Learned usable home battery capacity"},
       "ev_battery_capacity_learned": {"name": "Learned usable EV battery capacity"},
       "soc_load_devices": {"name": "SOC-controlled devices"},

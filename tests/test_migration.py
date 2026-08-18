@@ -6,6 +6,8 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.gridpilot import async_migrate_entry
 from custom_components.gridpilot.const import (
+    CONF_AUTO_CHARGE_SOC_SOLAR,
+    CONF_AUTO_CHARGE_SOC_SOLAR_EV,
     CONF_BATTERY_CHARGE_ENERGY,
     CONF_BATTERY_DISCHARGE_ENERGY,
     CONF_BATTERY_ENERGY,
@@ -47,6 +49,8 @@ async def test_migrate_grid_limit_entity_to_options(hass: HomeAssistant) -> None
     assert entry.options == {
         CONF_MAX_GRID_POWER: 2900,
         CONF_CHARGE_SOC: 15,
+        CONF_AUTO_CHARGE_SOC_SOLAR: False,
+        CONF_AUTO_CHARGE_SOC_SOLAR_EV: False,
         CONF_GRIDPILOT_EV_MODE: DEFAULT_EV_MODE,
         CONF_SOC_LOAD_THRESHOLDS: {},
         **_default_energy_meters(),

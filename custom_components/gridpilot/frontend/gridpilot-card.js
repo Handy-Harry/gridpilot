@@ -221,17 +221,33 @@ class GridPilotCard extends HTMLElement {
       ? `${charging ? "Laden" : "Ontladen"} met ${new Intl.NumberFormat(hass.locale?.language, { maximumFractionDigits: 1 }).format(powerInKw)} kW`
       : defaultLabel;
 
+    const chargeState = this._config.charge_entity
+      ? hass.states[this._config.charge_entity]
+      : undefined;
+    const chargeCandidate = Number.parseFloat(
+      chargeState?.state ?? this._config.charge_below,
+    );
+    const chargeBelow = Number.isFinite(chargeCandidate)
+      ? Math.max(0, Math.min(100, chargeCandidate))
+      : Number.NaN;
+    const thresholdOffset = Number(this._config.threshold_offset ?? 0);
     const minimumState = this._config.minimum_entity
       ? hass.states[this._config.minimum_entity]
       : undefined;
     const minimumCandidate = Number.parseFloat(
-      minimumState?.state ?? this._config.minimum_soc,
+      minimumState?.state ?? (
+        Number.isFinite(chargeBelow) ? chargeBelow - thresholdOffset : this._config.minimum_soc
+      ),
     );
     const minimum = Number.isFinite(minimumCandidate)
       ? Math.max(0, Math.min(100, minimumCandidate))
       : Number.NaN;
-    const chargeBelow = Number(this._config.charge_below);
-    const normalAbove = Number(this._config.normal_above);
+    const normalCandidate = Number.parseFloat(
+      Number.isFinite(chargeBelow) ? chargeBelow + thresholdOffset : this._config.normal_above,
+    );
+    const normalAbove = Number.isFinite(normalCandidate)
+      ? Math.max(0, Math.min(100, normalCandidate))
+      : Number.NaN;
     const hasControlRange = Number.isFinite(minimum)
       && Number.isFinite(normalAbove)
       && normalAbove > minimum;

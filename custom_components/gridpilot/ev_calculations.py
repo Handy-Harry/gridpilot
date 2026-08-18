@@ -7,7 +7,6 @@ import math
 from .const import (
     BATTERY_FULL_RELEASE_SOC,
     BATTERY_FULL_SOC,
-    EV_BATTERY_GRID_IMPORT_LIMIT,
     EV_BATTERY_MIN_TOLERANCE,
     EV_CHARGING_EFFICIENCY,
     EV_CURRENT_STEP,
@@ -126,7 +125,6 @@ def calculate_battery_to_ev_decision(
     minimum_soc: float,
     time_to_go: float,
     seconds_until_target: float,
-    grid_power: float,
     max_current: float,
 ) -> EVControlDecision:
     """Calculate EV current that reaches the battery reserve near the deadline."""
@@ -137,7 +135,6 @@ def calculate_battery_to_ev_decision(
         minimum_soc,
         time_to_go,
         seconds_until_target,
-        grid_power,
         max_current,
     )
     if not all(math.isfinite(value) for value in values):
@@ -167,9 +164,6 @@ def calculate_battery_to_ev_decision(
     if current < EV_MIN_CURRENT:
         requested = EV_MIN_CURRENT
         reason = "Battery-to-EV charging started"
-    elif grid_power > EV_BATTERY_GRID_IMPORT_LIMIT and current > EV_MIN_CURRENT:
-        requested = current - EV_CURRENT_STEP
-        reason = "Grid import reduces battery-to-EV current"
     elif time_to_go > desired_time_to_go + tolerance:
         requested = current + EV_CURRENT_STEP
         reason = "Battery reserve allows more EV current"

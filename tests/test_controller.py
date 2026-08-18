@@ -1,7 +1,7 @@
 """Tests for optional GridPilot battery actuation."""
 
 from datetime import datetime
-from time import time
+from time import monotonic, time
 from zoneinfo import ZoneInfo
 
 from homeassistant.const import ATTR_ENTITY_ID, UnitOfElectricCurrent, UnitOfPower
@@ -222,7 +222,7 @@ def test_departure_grid_plan_reduces_setpoint_when_battery_is_below_target(
 
 
 def test_departure_grid_plan_reduces_ev_current_at_grid_setpoint_limit(
-    hass: HomeAssistant,
+    hass: HomeAssistant, monkeypatch
 ) -> None:
     entry = _entry(False, configure_ev=True, pv_mode="Vertrektijd")
     _set_valid_states(hass)
@@ -245,6 +245,8 @@ def test_departure_grid_plan_reduces_ev_current_at_grid_setpoint_limit(
         phase_count=1,
     )
     controller._departure_ev_current = 10
+    controller._departure_battery_high_since = monotonic() - 121
+    monkeypatch.setattr(controller, "_departure_battery_power", lambda: 1_000)
 
     controller._apply_departure_grid_plan()
 
@@ -268,6 +270,7 @@ def test_departure_grid_plan_holds_last_setpoint_when_input_is_unavailable(
         phase_count=1,
     )
     controller._departure_grid_setpoint = 1200
+    controller._departure_battery_high_since = monotonic() - 121
     hass.states.async_set("sensor.battery_power", "unavailable")
 
     controller._apply_departure_grid_plan()
@@ -276,7 +279,7 @@ def test_departure_grid_plan_holds_last_setpoint_when_input_is_unavailable(
 
 
 def test_departure_grid_plan_increases_last_requested_setpoint_by_one_step(
-    hass: HomeAssistant,
+    hass: HomeAssistant, monkeypatch
 ) -> None:
     entry = _entry(False, configure_ev=True, pv_mode="Vertrektijd")
     _set_valid_states(hass)
@@ -294,11 +297,13 @@ def test_departure_grid_plan_increases_last_requested_setpoint_by_one_step(
         phase_count=1,
     )
     controller._departure_grid_setpoint = 1200
+    controller._departure_battery_high_since = monotonic() - 121
+    monkeypatch.setattr(controller, "_departure_battery_power", lambda: 1_000)
 
     controller._apply_departure_grid_plan()
 
     assert controller.decision.requested_grid_setpoint == 1450
-    assert controller.decision.calculated_grid_setpoint == 2900
+    assert controller.decision.calculated_grid_setpoint == 2000
 
 
 async def test_shadow_mode_never_writes(hass: HomeAssistant) -> None:

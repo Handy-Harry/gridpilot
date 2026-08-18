@@ -124,12 +124,22 @@ def _dashboard_config(
     home_battery_capacity = _gridpilot_entity(
         hass, entry, "sensor", "home_battery_capacity"
     )
+    home_battery_capacity_configured = _gridpilot_entity(
+        hass, entry, "number", "home_battery_capacity_configured"
+    )
+    charge_soc_entity = _gridpilot_entity(hass, entry, "number", "charge_soc")
+    auto_charge_soc_solar = _gridpilot_entity(
+        hass, entry, "switch", "auto_charge_soc_solar"
+    )
+    auto_charge_soc_solar_ev = _gridpilot_entity(
+        hass, entry, "switch", "auto_charge_soc_solar_ev"
+    )
     ev_battery_energy = _gridpilot_entity(hass, entry, "sensor", "ev_battery_energy")
     ev_energy_to_target = _gridpilot_entity(
         hass, entry, "sensor", "ev_energy_to_target"
     )
-    ev_battery_capacity = _gridpilot_entity(
-        hass, entry, "number", "ev_battery_capacity"
+    ev_battery_capacity_learned = _gridpilot_entity(
+        hass, entry, "sensor", "ev_battery_capacity_learned"
     )
     soc_load_devices = _gridpilot_entity(hass, entry, "sensor", "soc_load_devices")
     charge_soc = float(entry.options.get(CONF_CHARGE_SOC, DEFAULT_CHARGE_SOC))
@@ -149,10 +159,43 @@ def _dashboard_config(
             "power_charge_positive": entry.options.get(
                 CONF_BATTERY_CHARGE_POSITIVE, DEFAULT_BATTERY_CHARGE_POSITIVE
             ),
+            "charge_entity": charge_soc_entity,
+            "threshold_offset": SOC_THRESHOLD_OFFSET,
             "minimum_soc": charge_soc - SOC_THRESHOLD_OFFSET,
             "charge_below": charge_soc,
             "normal_above": charge_soc + SOC_THRESHOLD_OFFSET,
             "setpoint_entity": calculated_setpoint,
+        },
+        {
+            "type": "grid",
+            "columns": 2,
+            "square": False,
+            "cards": [
+                {
+                    "type": "tile",
+                    "entity": charge_soc_entity,
+                    "name": "Bijladen vanaf SOC",
+                    "icon": "mdi:battery-charging-medium",
+                    "features": [{"type": "numeric-input", "style": "slider"}],
+                },
+                {
+                    "type": "vertical-stack",
+                    "cards": [
+                        {
+                            "type": "tile",
+                            "entity": auto_charge_soc_solar,
+                            "name": "Bijlaadpunt op zon",
+                            "icon": "mdi:weather-sunny",
+                        },
+                        {
+                            "type": "tile",
+                            "entity": auto_charge_soc_solar_ev,
+                            "name": "Bijlaadpunt op zon en EV",
+                            "icon": "mdi:car-electric",
+                        },
+                    ],
+                },
+            ],
         },
         {
             "type": "markdown",
@@ -172,12 +215,10 @@ def _dashboard_config(
             "entities": [
                 home_battery_energy,
                 home_battery_capacity,
+                home_battery_capacity_configured,
                 ev_battery_energy,
                 ev_energy_to_target,
-                {
-                    "entity": ev_battery_capacity,
-                    "name": "EV-batterijcapaciteit (ingesteld)",
-                },
+                ev_battery_capacity_learned,
             ],
         },
         {"type": "markdown", "content": _soc_load_markdown(soc_load_devices)},

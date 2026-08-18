@@ -9,6 +9,8 @@ from homeassistant.helpers import config_validation as cv
 
 from .calculations import normalize_power
 from .const import (
+    CONF_AUTO_CHARGE_SOC_SOLAR,
+    CONF_AUTO_CHARGE_SOC_SOLAR_EV,
     CONF_BATTERY_CHARGE_ENERGY,
     CONF_BATTERY_DISCHARGE_ENERGY,
     CONF_BATTERY_ENERGY,
@@ -32,6 +34,8 @@ from .const import (
     CONF_SOC_LOAD_OFF_THRESHOLD,
     CONF_SOC_LOAD_ON_THRESHOLD,
     CONF_SOC_LOAD_THRESHOLDS,
+    DEFAULT_AUTO_CHARGE_SOC_SOLAR,
+    DEFAULT_AUTO_CHARGE_SOC_SOLAR_EV,
     DEFAULT_CHARGE_SOC,
     DEFAULT_EV_MODE,
     DEFAULT_SOC_LOAD_OFF_THRESHOLD,
@@ -92,6 +96,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) ->
         Platform.BINARY_SENSOR,
         Platform.NUMBER,
         Platform.SELECT,
+        Platform.SWITCH,
         Platform.TIME,
     ]
     controller = GridPilotController(hass, entry)
@@ -126,6 +131,12 @@ async def async_migrate_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) 
             data.pop(CONF_MAX_GRID_POWER, None)
 
         defaults = {CONF_CHARGE_SOC: DEFAULT_CHARGE_SOC}
+        defaults.update(
+            {
+                CONF_AUTO_CHARGE_SOC_SOLAR: DEFAULT_AUTO_CHARGE_SOC_SOLAR,
+                CONF_AUTO_CHARGE_SOC_SOLAR_EV: DEFAULT_AUTO_CHARGE_SOC_SOLAR_EV,
+            }
+        )
         for key, value in defaults.items():
             options.setdefault(key, value)
 
@@ -304,6 +315,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: GridPilotConfigEntry) -
             Platform.BINARY_SENSOR,
             Platform.NUMBER,
             Platform.SELECT,
+            Platform.SWITCH,
             Platform.TIME,
         ],
     )

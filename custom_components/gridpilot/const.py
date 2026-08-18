@@ -5,12 +5,14 @@ from typing import Final
 
 DOMAIN: Final = "gridpilot"
 NAME: Final = "GridPilot"
-VERSION: Final = "1.2.0"
+VERSION: Final = "1.4.6"
 
-PLATFORMS: Final = ["sensor", "binary_sensor", "number"]
+PLATFORMS: Final = ["sensor", "binary_sensor", "number", "switch"]
 UPDATE_INTERVAL: Final = timedelta(minutes=1)
 MIN_ACTUATION_INTERVAL: Final = timedelta(seconds=10)
 EV_UPDATE_INTERVAL: Final = timedelta(seconds=4)
+INPUT_SETTLE_DELAY: Final = timedelta(seconds=2)
+INPUT_MAX_SETTLE_DELAY: Final = timedelta(seconds=5)
 EV_POWER_MEDIAN_WINDOW: Final = timedelta(seconds=45)
 EV_CURRENT_MEDIAN_WINDOW: Final = timedelta(minutes=2)
 EV_STOP_DELAY: Final = timedelta(minutes=5)
@@ -26,6 +28,7 @@ CONF_HAS_SOC_LOADS: Final = "has_soc_loads"
 CONF_BATTERY_SOC: Final = "battery_soc"
 CONF_BATTERY_POWER: Final = "battery_power"
 CONF_BATTERY_ENERGY: Final = "battery_energy"
+CONF_BATTERY_CAPACITY: Final = "battery_capacity"
 CONF_BATTERY_CHARGE_ENERGY: Final = "battery_charge_energy"
 CONF_BATTERY_DISCHARGE_ENERGY: Final = "battery_discharge_energy"
 CONF_GRID_SETPOINT: Final = "grid_setpoint"
@@ -37,6 +40,8 @@ CONF_HOME_LOAD_L3: Final = "home_load_l3"
 
 CONF_MINIMUM_SOC: Final = "minimum_soc"
 CONF_CHARGE_SOC: Final = "charge_soc"
+CONF_AUTO_CHARGE_SOC_SOLAR: Final = "auto_charge_soc_solar"
+CONF_AUTO_CHARGE_SOC_SOLAR_EV: Final = "auto_charge_soc_solar_ev"
 CONF_NORMAL_SOC: Final = "normal_soc"
 CONF_ENABLE_ACTUATION: Final = "enable_actuation"
 CONF_GRID_POWER: Final = "grid_power"
@@ -50,6 +55,7 @@ CONF_EV_PHASE_MODE: Final = "ev_phase_mode"
 CONF_GRIDPILOT_EV_MODE: Final = "gridpilot_ev_mode"
 CONF_EV_OVERRIDE: Final = "ev_override"
 CONF_EV_MANUAL_CURRENT: Final = "ev_manual_current"
+CONF_EV_LAST_SAFE_CURRENT: Final = "ev_last_safe_current"
 CONF_EV_BATTERY_SOC: Final = "ev_battery_soc"
 CONF_EV_BATTERY_MIN_SOC: Final = "ev_battery_min_soc"
 CONF_EV_BATTERY_TIME_TO_GO: Final = "ev_battery_time_to_go"
@@ -71,13 +77,23 @@ CONF_EV_DEPARTURE_TARGET_SOC: Final = "ev_departure_target_soc"
 CONF_EV_BATTERY_CAPACITY: Final = "ev_battery_capacity"
 CONF_EV_CHARGE_ENERGY: Final = "ev_charge_energy"
 CONF_EV_DISCHARGE_ENERGY: Final = "ev_discharge_energy"
+CONF_EV_SOC_CALCULATION: Final = "ev_soc_calculation"
 CONF_CAPACITY_CALIBRATION: Final = "capacity_calibration"
 CAPACITY_MIN_SOC_DELTA: Final = 5.0
 CAPACITY_MIN_ENERGY_DELTA: Final = 1.0
 CAPACITY_SMOOTHING: Final = 0.25
 
 DEFAULT_CHARGE_SOC: Final = 15.0
-SOC_THRESHOLD_OFFSET: Final = 5.0
+DEFAULT_AUTO_CHARGE_SOC_SOLAR: Final = False
+DEFAULT_AUTO_CHARGE_SOC_SOLAR_EV: Final = False
+PV_FORECAST_REMAINING_ENTITY: Final = (
+    "sensor.victron_remote_monitoring_estimated_energy_production_today_remaining"
+)
+CONSUMPTION_FORECAST_REMAINING_ENTITY: Final = (
+    "sensor.victron_remote_monitoring_estimated_energy_consumption_today_remaining"
+)
+DEFAULT_BATTERY_CAPACITY: Final = 30.0
+SOC_THRESHOLD_OFFSET: Final = 3.0
 DEFAULT_MAX_GRID_POWER: Final = 2_900.0
 DEFAULT_ENABLE_ACTUATION: Final = False
 DEFAULT_ENABLE_EV_ACTUATION: Final = False
@@ -125,10 +141,10 @@ EV_DEPARTURE_CURRENT_STEP: Final = 0.5
 DEPARTURE_SETPOINT_STEP: Final = 250.0
 DEPARTURE_BATTERY_POWER_DEADBAND: Final = 150.0
 DEPARTURE_SETPOINT_INTERVAL: Final = timedelta(seconds=10)
+DEPARTURE_BATTERY_HIGH_DELAY: Final = timedelta(seconds=120)
 EV_CURRENT_DEADBAND: Final = 0.3
 BATTERY_FULL_SOC: Final = 98.0
 BATTERY_FULL_RELEASE_SOC: Final = 97.0
-EV_BATTERY_GRID_IMPORT_LIMIT: Final = 150.0
 EV_BATTERY_MIN_TOLERANCE: Final = 600.0
 
 EV_STRATEGY_NONE: Final = "none"

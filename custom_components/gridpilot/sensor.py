@@ -15,14 +15,17 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
+    CONF_BATTERY_CAPACITY,
     CONF_BATTERY_ENERGY,
+    CONF_CHARGE_SOC,
     CONF_ENABLE_SOC_LOAD_ACTUATION,
     CONF_EV_BATTERY_CAPACITY,
     CONF_EV_DEPARTURE_TARGET_SOC,
-    CONF_EV_VEHICLE_SOC,
     CONF_SOC_LOAD_ENTITIES,
     CONF_SOC_LOAD_OFF_THRESHOLD,
     CONF_SOC_LOAD_ON_THRESHOLD,
+    DEFAULT_BATTERY_CAPACITY,
+    DEFAULT_CHARGE_SOC,
     DEFAULT_EV_BATTERY_CAPACITY,
     DEFAULT_EV_DEPARTURE_TARGET_SOC,
     DEFAULT_SOC_LOAD_OFF_THRESHOLD,
@@ -135,7 +138,7 @@ class DepartureBatteryPowerSensor(GridPilotEntity, SensorEntity):
 
 
 class HomeBatteryEnergySensor(GridPilotEntity, SensorEntity):
-    """Expose the configured measured remaining home-battery energy."""
+    """Expose home-battery energy available above the reserve SOC."""
 
     _attr_translation_key = "home_battery_energy"
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
@@ -147,21 +150,36 @@ class HomeBatteryEnergySensor(GridPilotEntity, SensorEntity):
 
     @property
     def native_value(self) -> float | None:
-        capacity = self.controller.learned_capacity("home")
-        if capacity is not None:
-            try:
-                return round(
-                    capacity
-                    * self.controller._numeric_state(self.entry.data["battery_soc"])
-                    / 100,
-                    2,
+        capacity = float(
+            self.entry.options.get(CONF_BATTERY_CAPACITY, DEFAULT_BATTERY_CAPACITY)
+        )
+        reserve_soc = float(
+            self.entry.options.get(CONF_CHARGE_SOC, DEFAULT_CHARGE_SOC)
+        )
+        try:
+            return round(
+                capacity
+                * max(
+                    0.0,
+                    self.controller._numeric_state(self.entry.data["battery_soc"])
+                    - reserve_soc,
                 )
-            except ValueError:
-                pass
+                / 100,
+                2,
+            )
+        except ValueError:
+            pass
         entity_id = self.entry.options.get(CONF_BATTERY_ENERGY)
         if isinstance(entity_id, str):
             try:
-                return round(self.controller._energy_state(entity_id), 2)
+                reserve_energy = capacity * reserve_soc / 100
+                return round(
+                    max(
+                        0.0,
+                        self.controller._energy_state(entity_id) - reserve_energy,
+                    ),
+                    2,
+                )
             except ValueError:
                 pass
         return None
@@ -180,18 +198,14 @@ class EVBatteryEnergySensor(GridPilotEntity, SensorEntity):
 
     @property
     def native_value(self) -> float | None:
-        entity_id = self.entry.options.get(CONF_EV_VEHICLE_SOC)
-        if not isinstance(entity_id, str):
+        soc = self.controller.calculated_ev_soc
+        if soc is None:
             return None
-        try:
-            soc = self.controller._numeric_state(entity_id)
-            capacity = self.controller.learned_capacity("ev") or float(
-                self.entry.options.get(
-                    CONF_EV_BATTERY_CAPACITY, DEFAULT_EV_BATTERY_CAPACITY
-                )
+        capacity = float(
+            self.entry.options.get(
+                CONF_EV_BATTERY_CAPACITY, DEFAULT_EV_BATTERY_CAPACITY
             )
-        except ValueError:
-            return None
+        )
         return round(capacity * soc / 100, 2)
 
 
@@ -208,24 +222,55 @@ class EVEnergyToTargetSensor(GridPilotEntity, SensorEntity):
 
     @property
     def native_value(self) -> float | None:
-        entity_id = self.entry.options.get(CONF_EV_VEHICLE_SOC)
-        if not isinstance(entity_id, str):
+        soc = self.controller.calculated_ev_soc
+        if soc is None:
             return None
-        try:
-            soc = self.controller._numeric_state(entity_id)
-            capacity = self.controller.learned_capacity("ev") or float(
-                self.entry.options.get(
-                    CONF_EV_BATTERY_CAPACITY, DEFAULT_EV_BATTERY_CAPACITY
-                )
+        capacity = float(
+            self.entry.options.get(
+                CONF_EV_BATTERY_CAPACITY, DEFAULT_EV_BATTERY_CAPACITY
             )
-            target = float(
-                self.entry.options.get(
-                    CONF_EV_DEPARTURE_TARGET_SOC, DEFAULT_EV_DEPARTURE_TARGET_SOC
-                )
+        )
+        target = float(
+            self.entry.options.get(
+                CONF_EV_DEPARTURE_TARGET_SOC, DEFAULT_EV_DEPARTURE_TARGET_SOC
             )
-        except ValueError:
-            return None
+        )
         return round(capacity * max(0, target - soc) / 100, 2)
+
+
+class CalculatedEVSocSensor(GridPilotEntity, SensorEntity):
+    """Expose the SOC used by GridPilot's EV planner."""
+
+    _attr_translation_key = "calculated_ev_soc"
+    _attr_native_unit_of_measurement = "%"
+    _attr_device_class = SensorDeviceClass.BATTERY
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, entry: GridPilotConfigEntry) -> None:
+        super().__init__(entry)
+        self._attr_unique_id = f"{entry.entry_id}_calculated_ev_soc"
+
+    @property
+    def native_value(self) -> float | None:
+        return self.controller.calculated_ev_soc
+
+
+class LastMeasuredEVSocSensor(GridPilotEntity, SensorEntity):
+    """Expose the most recent SOC reported by the vehicle."""
+
+    _attr_translation_key = "last_measured_ev_soc"
+    _attr_native_unit_of_measurement = "%"
+    _attr_device_class = SensorDeviceClass.BATTERY
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, entry: GridPilotConfigEntry) -> None:
+        super().__init__(entry)
+        self._attr_unique_id = f"{entry.entry_id}_last_measured_ev_soc"
+
+    @property
+    def native_value(self) -> float | None:
+        return self.controller.last_measured_ev_soc
 
 
 class HomeBatteryCapacitySensor(GridPilotEntity, SensorEntity):
@@ -369,6 +414,8 @@ async def async_setup_entry(
             HomeBatteryEnergySensor(entry),
             EVBatteryEnergySensor(entry),
             EVEnergyToTargetSensor(entry),
+            CalculatedEVSocSensor(entry),
+            LastMeasuredEVSocSensor(entry),
             HomeBatteryCapacitySensor(entry),
             EVBatteryCapacitySensor(entry),
             SOCLoadDevicesSensor(entry),

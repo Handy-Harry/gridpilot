@@ -123,9 +123,9 @@ def test_dashboard_uses_configured_entities() -> None:
     assert "sensor.battery_soc" in rendered
     assert "power_charge_positive" in rendered
     battery_card = config["views"][0]["sections"][0]["cards"][1]
-    assert battery_card["minimum_soc"] == 10
+    assert battery_card["minimum_soc"] == 12
     assert battery_card["charge_below"] == 15
-    assert battery_card["normal_above"] == 20
+    assert battery_card["normal_above"] == 18
     assert "number.grid_setpoint" in rendered
     assert "select.gridpilot_ev_mode" in rendered
     assert "sensor.ev_soc" in rendered

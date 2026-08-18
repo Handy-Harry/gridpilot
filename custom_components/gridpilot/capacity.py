@@ -21,8 +21,14 @@ def update_capacity_sample(
     soc: float,
     charge_energy: float,
     discharge_energy: float,
+    charging_only: bool = False,
 ) -> CapacitySample:
-    """Return a baseline or a smoothed capacity estimate from cumulative energy."""
+    """Return a baseline or smoothed capacity estimate from cumulative energy.
+
+    EV calibration is charging-only because the vehicle's consumed energy is not
+    available in Home Assistant. SOC updates can arrive in jumps, so the previous
+    baseline is retained while a charging window is still too small to measure.
+    """
     if not all(
         math.isfinite(value) for value in (soc, charge_energy, discharge_energy)
     ):
@@ -40,11 +46,24 @@ def update_capacity_sample(
             "capacity": previous["capacity"] if previous else 0.0,
         }
 
-    soc_delta = abs(soc - previous["soc"])
-    energy_delta = abs(
-        (charge_energy - previous["charge_energy"])
+    raw_soc_delta = soc - previous["soc"]
+    raw_energy_delta = (
+        charge_energy
+        - previous["charge_energy"]
         - (discharge_energy - previous["discharge_energy"])
     )
+    if charging_only and raw_soc_delta < 0:
+        return {
+            "soc": soc,
+            "charge_energy": charge_energy,
+            "discharge_energy": discharge_energy,
+            "capacity": previous["capacity"],
+        }
+
+    soc_delta = raw_soc_delta if charging_only else abs(raw_soc_delta)
+    energy_delta = raw_energy_delta if charging_only else abs(raw_energy_delta)
+    if charging_only and (soc_delta <= 0 or energy_delta <= 0):
+        return previous
     if soc_delta < CAPACITY_MIN_SOC_DELTA or energy_delta < CAPACITY_MIN_ENERGY_DELTA:
         return previous
 

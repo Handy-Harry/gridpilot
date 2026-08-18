@@ -73,7 +73,6 @@ async def test_complete_config_flow(hass: HomeAssistant) -> None:
 
     control_options = {
         CONF_MAX_GRID_POWER: 2900,
-        CONF_CHARGE_SOC: 15,
         CONF_ENABLE_ACTUATION: False,
     }
     result = await hass.config_entries.flow.async_configure(

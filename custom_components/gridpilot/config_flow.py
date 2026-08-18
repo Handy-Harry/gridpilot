@@ -17,7 +17,6 @@ from .const import (
     CONF_BATTERY_ENERGY,
     CONF_BATTERY_POWER,
     CONF_BATTERY_SOC,
-    CONF_CHARGE_SOC,
     CONF_ENABLE_ACTUATION,
     CONF_ENABLE_EV_ACTUATION,
     CONF_ENABLE_SOC_LOAD_ACTUATION,
@@ -57,7 +56,6 @@ from .const import (
     CONF_SOC_LOAD_ON_THRESHOLD,
     CONF_SOC_LOAD_THRESHOLDS,
     DEFAULT_BATTERY_CHARGE_POSITIVE,
-    DEFAULT_CHARGE_SOC,
     DEFAULT_ENABLE_ACTUATION,
     DEFAULT_ENABLE_EV_ACTUATION,
     DEFAULT_ENABLE_SOC_LOAD_ACTUATION,
@@ -517,14 +515,6 @@ def _control_options_schema(current: dict[str, Any]) -> vol.Schema:
                     max=10_000,
                     step=100,
                     unit_of_measurement="W",
-                )
-            ),
-            vol.Required(
-                CONF_CHARGE_SOC,
-                default=current.get(CONF_CHARGE_SOC, DEFAULT_CHARGE_SOC),
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=5, max=95, step=0.5, unit_of_measurement="%"
                 )
             ),
             vol.Required(

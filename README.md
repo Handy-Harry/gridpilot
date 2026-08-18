@@ -10,8 +10,8 @@ GridPilot is a Home Assistant energy management integration focused on monitorin
 
 ## Current status
 
-Version `1.0.0` is the first stable release. Battery and EV actuation remain in
-shadow mode by default and can be enabled independently.
+Version `1.4.6` is the current stable release. Battery and EV actuation remain
+in shadow mode by default and can be enabled independently.
 Battery setpoint actuation can be enabled explicitly from the integration options
 after the existing battery controller has been disabled.
 
@@ -19,9 +19,9 @@ after the existing battery controller has been disabled.
 
 - UI-only configuration through a Home Assistant config flow.
 - Generic entity mapping with a Victron-oriented preset.
-- Integration-owned grid-power and battery-curve options without helpers. The
-  maximum-charging and normal-operation SOC thresholds are derived 5 percentage
-  points below and above the configured full-compensation SOC.
+- Integration-owned grid-power and battery-curve options without helpers.
+- Optional forecast-driven charge-SOC controls for solar production, with or
+  without the EV energy needed for its configured departure target.
 - Calculated grid setpoint and operating-mode sensors.
 - Phase-aware PV-surplus and EV-current calculations.
 - Configurable battery-power sign convention for PV-surplus calculations.
@@ -33,6 +33,7 @@ after the existing battery controller has been disabled.
 - Measurement-validity binary sensor.
 - Bundled `custom:gridpilot-card` frontend card.
 - Automatic `GridPilot` dashboard with battery, setpoint and EV-control status.
+- EV SOC estimation between vehicle updates from measured charged energy.
 - Dutch and English translations.
 
 GridPilot creates a storage dashboard at `/gridpilot-dashboard`, adds it to the

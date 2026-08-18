@@ -36,7 +36,10 @@ class BatteryCurve:
     def validate(self) -> None:
         """Raise when the curve is unsafe or inconsistent."""
         if not SOC_THRESHOLD_OFFSET <= self.charge_soc <= 100 - SOC_THRESHOLD_OFFSET:
-            raise ValueError("Charge SOC must be between 5 and 95 percent")
+            raise ValueError(
+                "Charge SOC must be between "
+                f"{SOC_THRESHOLD_OFFSET:g} and {100 - SOC_THRESHOLD_OFFSET:g} percent"
+            )
         if self.minimum_charge_power < 0:
             raise ValueError("Minimum charge power cannot be negative")
 

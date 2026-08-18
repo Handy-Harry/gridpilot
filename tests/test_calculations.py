@@ -46,9 +46,9 @@ def test_normalize_power_rejects_unknown_unit() -> None:
     ("soc", "mode", "setpoint"),
     [
         (10, MODE_MAX_CHARGING, 2900),
-        (12.5, MODE_CHARGING, 2550),
+        (12.5, MODE_CHARGING, 2900),
         (15, MODE_NEUTRAL, 1100),
-        (17.5, MODE_TAPERING, 550),
+        (17.5, MODE_TAPERING, 180),
         (20, MODE_NORMAL, 0),
         (80, MODE_NORMAL, 0),
     ],
@@ -77,12 +77,12 @@ def test_grid_limit_caps_home_load_and_charging(curve: BatteryCurve) -> None:
     assert decision.requested_grid_setpoint == 2900
 
 
-@pytest.mark.parametrize("curve", [BatteryCurve(4, 300), BatteryCurve(96, 300)])
+@pytest.mark.parametrize("curve", [BatteryCurve(2, 300), BatteryCurve(98, 300)])
 def test_invalid_curves_are_rejected(curve: BatteryCurve) -> None:
     with pytest.raises(ValueError, match="Charge SOC"):
         curve.validate()
 
 
 def test_soc_thresholds_are_derived_from_charge_soc(curve: BatteryCurve) -> None:
-    assert curve.minimum_soc == 10
-    assert curve.normal_soc == 20
+    assert curve.minimum_soc == 12
+    assert curve.normal_soc == 18

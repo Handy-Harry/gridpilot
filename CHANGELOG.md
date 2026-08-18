@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.4.6 - 2026-08-18
+
+- Add coordinated input settling so GridPilot calculates from a consistent set of
+  source states instead of reacting to each individual update.
+- Calculate EV SOC between vehicle updates from delivered charging energy, while
+  persisting the latest measured SOC as a restart-safe anchor.
+- Add optional solar-forecast and solar-plus-EV-forecast charge-SOC modes to the
+  GridPilot dashboard.
+- Improve EV departure planning, full-battery PV handling, capacity and energy
+  presentation, translations, and the bundled dashboard card.
+- Add configurable usable home-battery capacity and include the automatic SOC
+  controls as GridPilot switch entities.
+
 ## 1.3.5 - 2026-08-15
 
 - Restore Home Assistant translation validation by removing obsolete options-flow

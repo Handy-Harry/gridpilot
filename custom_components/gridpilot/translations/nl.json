@@ -24,9 +24,9 @@
       },
       "pv": {
         "title": "PV-metingen configureren",
-        "description": "GridPilot leidt het beschikbare PV-overschot af uit de meting van het netvermogen.",
+        "description": "GridPilot gebruikt netinjectie alleen als extra PV-overschot wanneer de thuisbatterij vol is.",
         "data": {"grid_power": "Netvermogen"},
-        "data_description": {"grid_power": "Netvermogen in W of kW, positief voor afname en negatief voor injectie."}
+        "data_description": {"grid_power": "Netvermogen in W of kW. Alleen negatieve injectie wordt gebruikt, en alleen zolang de batterij-volhysterese actief is."}
       },
       "vehicle": {
         "title": "Metingen elektrische wagen configureren",
@@ -84,7 +84,7 @@
         },
         "data_description": {
           "grid_setpoint": "Schrijfbare getal-entiteit voor de gewenste netafname in watt. GridPilot schrijft er alleen naar wanneer actieve sturing expliciet is ingeschakeld. Victron-voorbeeld: number.gx_device_ac_power_setpoint.",
-          "grid_power": "Netvermogen in W of kW, positief voor afname en negatief voor injectie. Verplicht wanneer PV-overschotsturing is gekozen.",
+          "grid_power": "Netvermogen in W of kW. GridPilot gebruikt alleen negatieve injectie als PV-overschot wanneer de thuisbatterij vol is.",
           "home_load": "Sensor met het actuele totale huisverbruik in W of kW. Wanneer deze is geselecteerd, krijgt hij voorrang op de fasesensoren.",
           "home_load_l1": "Actueel huisverbruik op fase L1 in W of kW. Vul L1, L2 en L3 in wanneer geen sensor voor totaal huisverbruik is geselecteerd.",
           "home_load_l2": "Actueel huisverbruik op fase L2 in W of kW. Vul L1, L2 en L3 in wanneer geen sensor voor totaal huisverbruik is geselecteerd.",
@@ -121,7 +121,7 @@
           "enable_ev_actuation": "Actieve EV-stroomregeling inschakelen"
         },
         "data_description": {
-          "grid_power": "Netvermogen in W of kW, positief voor afname en negatief voor injectie.",
+          "grid_power": "Netvermogen in W of kW. Alleen negatieve injectie wordt gebruikt wanneer de thuisbatterij vol is.",
           "ev_power": "Actueel EV-laadvermogen in W of kW.",
           "ev_vehicle_soc": "Optionele SOC-sensor van de wagen die op het GridPilot-dashboard wordt getoond.",
           "ev_connection_state": "Entiteit waarvan de status aangeeft of een EV verbonden is.",
@@ -222,7 +222,7 @@
           "enable_ev_actuation": "Actieve EV-stroomregeling inschakelen"
         },
         "data_description": {
-          "grid_power": "Netvermogen in W of kW, positief voor afname en negatief voor injectie.",
+          "grid_power": "Netvermogen in W of kW. Alleen negatieve injectie wordt gebruikt wanneer de thuisbatterij vol is.",
           "ev_power": "Actueel EV-laadvermogen in W of kW.",
           "ev_vehicle_soc": "Optionele SOC-sensor van de wagen die op het GridPilot-dashboard wordt getoond.",
           "ev_connection_state": "Entiteit waarvan de status aangeeft of een EV verbonden is.",
@@ -255,15 +255,29 @@
     }
   },
   "entity": {
+    "switch": {
+      "auto_charge_soc_solar": {
+        "name": "Bijlaad-SOC op zonvoorspelling"
+      },
+      "auto_charge_soc_solar_ev": {
+        "name": "Bijlaad-SOC op zonvoorspelling en EV"
+      }
+    },
     "number": {
       "ev_priority": {
         "name": "PV-prioriteit EV"
+      },
+      "charge_soc": {
+        "name": "Bijladen vanaf SOC"
       },
       "ev_departure_target_soc": {
         "name": "EV-doel-SOC bij vertrek"
       },
       "ev_battery_capacity": {
         "name": "Bruikbare EV-batterijcapaciteit"
+      },
+      "home_battery_capacity_configured": {
+        "name": "Bruikbare thuisbatterijcapaciteit"
       }
     },
     "time": {
@@ -293,9 +307,11 @@
       "available_pv_power": {"name": "Beschikbaar PV-vermogen"},
       "ev_target_current": {"name": "EV-doelstroom"},
       "departure_battery_power": {"name": "Gepland thuisbatterijvermogen voor vertrek"},
-      "home_battery_energy": {"name": "Resterende thuisbatterij-energie"},
+      "home_battery_energy": {"name": "Thuisbatterij-energie boven reserve"},
       "ev_battery_energy": {"name": "EV-batterijenergie"},
       "ev_energy_to_target": {"name": "EV-energie nodig tot doel"},
+      "calculated_ev_soc": {"name": "Berekend EV-SOC"},
+      "last_measured_ev_soc": {"name": "Laatst gemeten EV-SOC"},
       "home_battery_capacity": {"name": "Geleerde bruikbare thuisbatterijcapaciteit"},
       "ev_battery_capacity_learned": {"name": "Geleerde bruikbare EV-batterijcapaciteit"},
       "soc_load_devices": {"name": "SOC-gestuurde apparaten"},
