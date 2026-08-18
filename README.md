@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="custom_components/gridpilot/brand/icon.png" alt="GridPilot capacity tariff meter" width="240">
+  <img src="https://raw.githubusercontent.com/Handy-Harry/gridpilot/main/custom_components/gridpilot/brand/icon.png" alt="GridPilot capacity tariff meter" width="240">
 </p>
 
 # GridPilot
